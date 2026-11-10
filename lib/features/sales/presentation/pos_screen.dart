@@ -865,8 +865,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     CartState cart,
     AsyncValue<Map<String, dynamic>> productsAsync,
   ) {
-    final hasActiveFilter =
-        _search.isNotEmpty ||
+    final hasActiveFilter = _search.isNotEmpty ||
         _tag.isNotEmpty ||
         _categoryId != null ||
         _inStockOnly;
@@ -887,7 +886,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   focusNode: _searchFocusNode,
                   decoration: InputDecoration(
                     hintText: 'Tìm theo tên sản phẩm, mã SKU hoặc quét mã',
-                    prefixIcon: const AppIcon(Icons.search_rounded, size: 19),
+                    prefixIcon: const AppIcon(
+                      Icons.search_rounded,
+                      size: 19,
+                    ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 12,
@@ -902,7 +904,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                 _productPage = 1;
                               });
                             },
-                            icon: const AppIcon(Icons.close_rounded, size: 18),
+                            icon: const AppIcon(
+                              Icons.close_rounded,
+                              size: 18,
+                            ),
                           )
                         : null,
                   ),
@@ -1049,9 +1054,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 ),
                 labelStyle: TextStyle(
                   fontSize: 13,
-                  fontWeight: _inStockOnly
-                      ? FontWeight.bold
-                      : FontWeight.normal,
+                  fontWeight:
+                      _inStockOnly ? FontWeight.bold : FontWeight.normal,
                   color: _inStockOnly ? Colors.white : c.textPrimary,
                 ),
               ),
