@@ -78,24 +78,41 @@ export class ProductService {
             }), searchParams);
         }
 
-        const stockTag = tag?.trim().toLocaleLowerCase('vi');
         const stockTotal = `(SELECT COALESCE(SUM(s.quantity), 0) FROM inventory_stocks s
             WHERE s.product_id = p.id AND s.shop_id = :shopId)`;
-        // Stock states are computed from the same shop-scoped source as currentStock.
-        // Apply before pagination; these are not persisted product labels.
-        if (stockTag === 'hết hàng') {
-            qb.andWhere(`${stockTotal} <= 0`);
-        } else if (stockTag === 'sắp hết') {
-            qb.andWhere(`${stockTotal} > 0 AND p.minStock > 0 AND ${stockTotal} <= p.minStock`);
-        } else if (tag?.trim()) {
-            qb.andWhere(
-                `EXISTS (
-                    SELECT 1
-                    FROM unnest(string_to_array(COALESCE(p.tags, ''), ',')) AS tag_value(value)
-                    WHERE LOWER(BTRIM(tag_value.value)) = LOWER(:tag)
-                )`,
-                { tag: tag.trim() },
-            );
+
+        if (tag?.trim()) {
+            const tagItems = tag.split(',').map(t => t.trim()).filter(Boolean);
+            const lowerTags = tagItems.map(t => t.toLocaleLowerCase('vi'));
+
+            // Hỗ trợ lọc trạng thái tồn kho đặc biệt
+            if (lowerTags.includes('hết hàng')) {
+                qb.andWhere(`${stockTotal} <= 0`);
+            } else if (lowerTags.includes('sắp hết')) {
+                qb.andWhere(`${stockTotal} > 0 AND p.minStock > 0 AND ${stockTotal} <= p.minStock`);
+            }
+
+            // Hỗ trợ lọc theo 1 hoặc nhiều nhãn sản phẩm (Multi-tag filter)
+            const businessTags = lowerTags.filter(t => t !== 'hết hàng' && t !== 'sắp hết');
+            if (businessTags.length === 1) {
+                qb.andWhere(
+                    `EXISTS (
+                        SELECT 1
+                        FROM unnest(string_to_array(COALESCE(p.tags, ''), ',')) AS tag_value(value)
+                        WHERE LOWER(BTRIM(tag_value.value)) = :singleTag
+                    )`,
+                    { singleTag: businessTags[0] },
+                );
+            } else if (businessTags.length > 1) {
+                qb.andWhere(
+                    `EXISTS (
+                        SELECT 1
+                        FROM unnest(string_to_array(COALESCE(p.tags, ''), ',')) AS tag_value(value)
+                        WHERE LOWER(BTRIM(tag_value.value)) IN (:...businessTags)
+                    )`,
+                    { businessTags },
+                );
+            }
         }
 
         return qb;
