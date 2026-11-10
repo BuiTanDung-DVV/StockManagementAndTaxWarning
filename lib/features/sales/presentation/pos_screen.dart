@@ -2021,220 +2021,39 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   }
 
   void _showCustomerPicker(BuildContext context) {
-    showModalBottomSheet(
-      useSafeArea: true,
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (ctx) => Consumer(
-        builder: (ctx, ref, _) {
-          final customersAsync = ref.watch(customerOptionsProvider);
-          return customersAsync.when(
-            loading: () => const SizedBox(
-              height: 220,
-              child: Center(child: CircularProgressIndicator()),
+    final isDesktop = MediaQuery.sizeOf(context).width > 600;
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (_) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
+            child: _PosCustomerPickerContent(
+              onClose: () => Navigator.pop(context),
             ),
-            error: (e, _) => const SizedBox(
-              height: 220,
-              child: Center(
-                child: Text(
-                  'Không thể tải danh sách khách hàng. Vui lòng thử lại.',
-                ),
-              ),
-            ),
-            data: (data) {
-              final customers = (data['items'] as List?) ?? [];
-              return SizedBox(
-                height: 360,
-                child: Column(
-                  children: [
-                    // Add new customer button
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            _showQuickAddCustomer(context);
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                            side: BorderSide(color: AppColors.primary),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text('Thêm khách hàng mới'),
-                        ),
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    if (customers.isEmpty)
-                      const Expanded(
-                        child: Center(
-                          child: Text('Chưa có khách hàng. Hãy thêm mới!'),
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: customers.length,
-                          itemBuilder: (_, i) {
-                            final c = customers[i];
-                            return ListTile(
-                              title: Text(
-                                c['name']?.toString() ?? 'Khách hàng',
-                              ),
-                              subtitle: Text(c['phone']?.toString() ?? ''),
-                              onTap: () {
-                                final newId = TypeParser.asInt(c['id']);
-                                final newName =
-                                    c['name']?.toString() ?? 'Khách hàng';
-                                ref
-                                    .read(_cartProvider.notifier)
-                                    .setCustomer(
-                                      newId == 0 ? null : newId,
-                                      newName,
-                                    );
-                                Navigator.pop(ctx);
-                                if (newId != 0) {
-                                  ToastService.showSuccess(
-                                    'Đã chọn khách hàng: $newName',
-                                  );
-                                }
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  Future<void> _showQuickAddCustomer(BuildContext context) async {
-    final nameCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-    final route = DialogRoute<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Thêm khách hàng nhanh'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(labelText: 'Tên khách hàng *'),
-              autofocus: true,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: phoneCtrl,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) async {
-                final name = nameCtrl.text.trim();
-                if (name.isEmpty) {
-                  ToastService.showError('Vui lòng nhập tên khách hàng');
-                  return;
-                }
-                final rawPhone = phoneCtrl.text.trim();
-                String? cleanPhone;
-                if (rawPhone.isNotEmpty) {
-                  final digits = rawPhone.replaceAll(RegExp(r'\D'), '');
-                  if (digits.length != 10 || !digits.startsWith('0')) {
-                    ToastService.showError(
-                      'Số điện thoại phải gồm 10 số (bắt đầu bằng 0)',
-                    );
-                    return;
-                  }
-                  cleanPhone = digits;
-                }
-                try {
-                  final result = await ref.read(customerRepoProvider).create({
-                    'name': name,
-                    'phone': ?cleanPhone,
-                  });
-                  final newId = TypeParser.asInt(result['id']);
-                  ref
-                      .read(_cartProvider.notifier)
-                      .setCustomer(newId == 0 ? null : newId, name);
-                  ref.invalidate(customerListProvider);
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  ToastService.showSuccess('Đã thêm khách hàng: $name');
-                } catch (e) {
-                  ToastService.showError(
-                    'Không thể thêm khách hàng. Vui lòng thử lại sau.',
-                  );
-                }
-              },
-              decoration: const InputDecoration(
-                labelText: 'Số điện thoại',
-                hintText: 'Ví dụ: 0912345678',
-              ),
-              keyboardType: TextInputType.phone,
-            ),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final name = nameCtrl.text.trim();
-              if (name.isEmpty) {
-                ToastService.showError('Vui lòng nhập tên khách hàng');
-                return;
-              }
-              final rawPhone = phoneCtrl.text.trim();
-              String? cleanPhone;
-              if (rawPhone.isNotEmpty) {
-                final digits = rawPhone.replaceAll(RegExp(r'\D'), '');
-                if (digits.length != 10 || !digits.startsWith('0')) {
-                  ToastService.showError(
-                    'Số điện thoại phải gồm 10 số (bắt đầu bằng 0)',
-                  );
-                  return;
-                }
-                cleanPhone = digits;
-              }
-              try {
-                final result = await ref.read(customerRepoProvider).create({
-                  'name': name,
-                  'phone': ?cleanPhone,
-                });
-                final newId = TypeParser.asInt(result['id']);
-                ref
-                    .read(_cartProvider.notifier)
-                    .setCustomer(newId == 0 ? null : newId, name);
-                ref.invalidate(customerListProvider);
-                if (ctx.mounted) Navigator.pop(ctx);
-                ToastService.showSuccess('Đã thêm khách hàng: $name');
-              } catch (e) {
-                ToastService.showError(
-                  'Không thể thêm khách hàng. Vui lòng thử lại sau.',
-                );
-              }
-            },
-            child: const Text('Thêm'),
-          ),
-        ],
-      ),
-    );
-    await Navigator.of(context, rootNavigator: true).push(route);
-    await route.completed;
-    nameCtrl.dispose();
-    phoneCtrl.dispose();
+      );
+    } else {
+      showModalBottomSheet(
+        useSafeArea: true,
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        ),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => const _PosCustomerPickerContent(),
+      );
+    }
   }
 
   Future<void> _showDiscountDialog(BuildContext context) async {
@@ -2900,6 +2719,824 @@ class _CashConfirmDialogState extends State<CashConfirmDialog> {
           child: const Text('Ghi nhận & hoàn tất'),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// POS CUSTOMER PICKER & CREATE MODAL
+// ---------------------------------------------------------------------------
+
+class _PosCustomerPickerContent extends ConsumerStatefulWidget {
+  final VoidCallback? onClose;
+  const _PosCustomerPickerContent({this.onClose});
+
+  @override
+  ConsumerState<_PosCustomerPickerContent> createState() =>
+      _PosCustomerPickerContentState();
+}
+
+class _PosCustomerPickerContentState
+    extends ConsumerState<_PosCustomerPickerContent> {
+  final _searchCtrl = TextEditingController();
+  String _keyword = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _openAddCustomer(BuildContext context, {String? initialName}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _PosCustomerAddDialog(
+        initialName: initialName,
+        onCreated: (newId, newName) {
+          ref.read(_cartProvider.notifier).setCustomer(newId, newName);
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    final cart = ref.watch(_cartProvider);
+    final customersAsync = ref.watch(customerOptionsProvider);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.people_alt_outlined,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Chọn khách hàng',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: c.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Tìm kiếm hoặc thêm mới khách hàng cho đơn',
+                      style: TextStyle(fontSize: 12, color: c.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              FilledButton.icon(
+                onPressed: () => _openAddCustomer(context),
+                icon: const Icon(Icons.person_add_alt_1, size: 16),
+                label: const Text('Thêm mới'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: widget.onClose ?? () => Navigator.pop(context),
+                tooltip: 'Đóng',
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: c.divider),
+
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: TextField(
+            controller: _searchCtrl,
+            onChanged: (v) => setState(() => _keyword = v.trim().toLowerCase()),
+            decoration: InputDecoration(
+              hintText: 'Tìm theo tên, số điện thoại hoặc mã khách...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _keyword.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() => _keyword = '');
+                      },
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 10,
+              ),
+              filled: true,
+              fillColor: c.cardAlt,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+
+        // List
+        Expanded(
+          child: customersAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Không thể tải danh sách khách hàng. Vui lòng thử lại.',
+                  style: TextStyle(color: c.textSecondary),
+                ),
+              ),
+            ),
+            data: (data) {
+              final rawList = (data['items'] as List?) ?? [];
+              final filtered = rawList.where((raw) {
+                if (_keyword.isEmpty) return true;
+                final m = Map<String, dynamic>.from(raw as Map);
+                final name = (m['name'] ?? '').toString().toLowerCase();
+                final phone = (m['phone'] ?? '').toString().toLowerCase();
+                final code = (m['code'] ?? '').toString().toLowerCase();
+                final address = (m['address'] ?? '').toString().toLowerCase();
+                return name.contains(_keyword) ||
+                    phone.contains(_keyword) ||
+                    code.contains(_keyword) ||
+                    address.contains(_keyword);
+              }).toList();
+
+              final showRetailOption =
+                  _keyword.isEmpty ||
+                  'khách lẻ khach le vãng lai vang lai'.contains(_keyword);
+
+              if (filtered.isEmpty && !showRetailOption) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.person_search_outlined,
+                          size: 48,
+                          color: c.textSecondary,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Không tìm thấy khách hàng "$_keyword"',
+                          style: TextStyle(
+                            color: c.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          onPressed: () =>
+                              _openAddCustomer(context, initialName: _keyword),
+                          icon: const Icon(Icons.person_add_alt_1, size: 18),
+                          label: Text('Tạo mới "$_keyword"'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: filtered.length + (showRetailOption ? 1 : 0),
+                separatorBuilder: (_, _) =>
+                    Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
+                itemBuilder: (ctx, i) {
+                  if (showRetailOption && i == 0) {
+                    final isRetailSelected = cart.customerId == null;
+                    return InkWell(
+                      onTap: () {
+                        ref
+                            .read(_cartProvider.notifier)
+                            .setCustomer(null, null);
+                        Navigator.pop(context);
+                        ToastService.showSuccess(
+                          'Đã chuyển sang: Khách bán lẻ',
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        color: isRetailSelected
+                            ? AppColors.primary.withValues(alpha: 0.08)
+                            : Colors.transparent,
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Colors.grey.withValues(
+                                alpha: 0.15,
+                              ),
+                              child: const Icon(
+                                Icons.storefront_outlined,
+                                color: Colors.grey,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Khách bán lẻ (Vãng lai)',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: isRetailSelected
+                                              ? AppColors.primary
+                                              : c.textPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Mặc định',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Không theo dõi công nợ · Thanh toán ngay',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: c.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isRetailSelected)
+                              Icon(
+                                Icons.check_circle,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  final itemIndex = showRetailOption ? i - 1 : i;
+                  final item = Map<String, dynamic>.from(
+                    filtered[itemIndex] as Map,
+                  );
+                  final id = TypeParser.asInt(item['id']);
+                  final name = item['name']?.toString() ?? 'Khách hàng';
+                  final phone = item['phone']?.toString() ?? '';
+                  final address = item['address']?.toString() ?? '';
+                  final balance = TypeParser.asDouble(item['balance']);
+                  final isSelected = cart.customerId == id;
+                  final initial = name.trim().isNotEmpty
+                      ? name.trim().characters.first.toUpperCase()
+                      : 'K';
+
+                  return InkWell(
+                    onTap: () {
+                      ref
+                          .read(_cartProvider.notifier)
+                          .setCustomer(id == 0 ? null : id, name);
+                      Navigator.pop(context);
+                      if (id != 0) {
+                        ToastService.showSuccess('Đã chọn khách hàng: $name');
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      color: isSelected
+                          ? AppColors.primary.withValues(alpha: 0.08)
+                          : Colors.transparent,
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: AppColors.primary.withValues(
+                              alpha: 0.12,
+                            ),
+                            child: Text(
+                              initial,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        name,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: isSelected
+                                              ? AppColors.primary
+                                              : c.textPrimary,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (balance > 0) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.warning.withValues(
+                                            alpha: 0.12,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                          border: Border.all(
+                                            color: AppColors.warning.withValues(
+                                              alpha: 0.4,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Nợ: ${_currFmt.format(balance)}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.warning,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    if (phone.isNotEmpty) ...[
+                                      Icon(
+                                        Icons.phone_outlined,
+                                        size: 13,
+                                        color: c.textSecondary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        phone,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: c.textSecondary,
+                                        ),
+                                      ),
+                                      if (address.isNotEmpty)
+                                        const SizedBox(width: 8),
+                                    ],
+                                    if (address.isNotEmpty) ...[
+                                      Icon(
+                                        Icons.location_on_outlined,
+                                        size: 13,
+                                        color: c.textSecondary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          address,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: c.textSecondary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isSelected) ...[
+                            const SizedBox(width: 10),
+                            Icon(
+                              Icons.check_circle,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PosCustomerAddDialog extends ConsumerStatefulWidget {
+  final String? initialName;
+  final void Function(int newId, String newName)? onCreated;
+
+  const _PosCustomerAddDialog({this.initialName, this.onCreated});
+
+  @override
+  ConsumerState<_PosCustomerAddDialog> createState() =>
+      _PosCustomerAddDialogState();
+}
+
+class _PosCustomerAddDialogState extends ConsumerState<_PosCustomerAddDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameCtrl;
+  final _phoneCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
+  final _taxCodeCtrl = TextEditingController();
+  final _notesCtrl = TextEditingController();
+
+  String _customerType = 'RETAIL';
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.initialName ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _addressCtrl.dispose();
+    _taxCodeCtrl.dispose();
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    final name = _nameCtrl.text.trim();
+    final rawPhone = _phoneCtrl.text.trim();
+    String? cleanPhone;
+    if (rawPhone.isNotEmpty) {
+      final digits = rawPhone.replaceAll(RegExp(r'\D'), '');
+      if (digits.length != 10 || !digits.startsWith('0')) {
+        ToastService.showError('Số điện thoại phải gồm 10 số (bắt đầu bằng 0)');
+        return;
+      }
+      cleanPhone = digits;
+    }
+
+    final rawTax = _taxCodeCtrl.text.trim();
+    if (rawTax.isNotEmpty) {
+      if (!RegExp(r'^\d{10}(-\d{3}|\d{3})?$').hasMatch(rawTax)) {
+        ToastService.showError('Mã số thuế phải gồm 10 hoặc 13 số');
+        return;
+      }
+    }
+
+    setState(() => _saving = true);
+    try {
+      final dto = <String, dynamic>{
+        'name': name,
+        'phone': ?cleanPhone,
+        'customerType': _customerType,
+        if (_addressCtrl.text.trim().isNotEmpty)
+          'address': _addressCtrl.text.trim(),
+        if (rawTax.isNotEmpty) 'taxCode': rawTax,
+        if (_notesCtrl.text.trim().isNotEmpty) 'notes': _notesCtrl.text.trim(),
+      };
+
+      final result = await ref.read(customerRepoProvider).create(dto);
+      final newId = TypeParser.asInt(result['id']);
+      final createdName = result['name']?.toString() ?? name;
+
+      ref.invalidate(customerOptionsProvider);
+      ref.invalidate(customerListProvider);
+
+      if (mounted) {
+        Navigator.pop(context); // Close add dialog
+        widget.onCreated?.call(newId, createdName);
+        ToastService.showSuccess('Đã thêm và chọn khách hàng: $createdName');
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastService.showError(
+          'Không thể thêm khách hàng. Vui lòng kiểm tra lại thông tin.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+
+    return Dialog(
+      backgroundColor: c.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      clipBehavior: Clip.antiAlias,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 520,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.person_add_alt_1,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Thêm khách hàng mới',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: c.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          'Lưu thông tin giao nhận và theo dõi công nợ',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: c.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: c.divider),
+
+            // Form Body
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Tên
+                      TextFormField(
+                        controller: _nameCtrl,
+                        textInputAction: TextInputAction.next,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Tên khách hàng / Đơn vị *',
+                          hintText: 'Ví dụ: Nguyễn Văn A hoặc Thợ xây Hóc Môn',
+                          prefixIcon: Icon(Icons.person_outline, size: 20),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Vui lòng nhập tên khách hàng';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // SĐT
+                      TextFormField(
+                        controller: _phoneCtrl,
+                        textInputAction: TextInputAction.next,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: 'Số điện thoại',
+                          hintText: 'Ví dụ: 0912345678',
+                          prefixIcon: Icon(Icons.phone_outlined, size: 20),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return null;
+                          final digits = v.replaceAll(RegExp(r'\D'), '');
+                          if (digits.length != 10 || !digits.startsWith('0')) {
+                            return 'Số điện thoại gồm 10 số (bắt đầu bằng 0)';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Nhóm khách hàng
+                      Text(
+                        'Phân loại khách hàng',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: c.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Khách lẻ'),
+                            selected: _customerType == 'RETAIL',
+                            onSelected: (s) {
+                              if (s) setState(() => _customerType = 'RETAIL');
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Thợ / Nhà thầu'),
+                            selected: _customerType == 'VIP',
+                            onSelected: (s) {
+                              if (s) setState(() => _customerType = 'VIP');
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Đại lý / Công ty'),
+                            selected: _customerType == 'WHOLESALE',
+                            onSelected: (s) {
+                              if (s) {
+                                setState(() => _customerType = 'WHOLESALE');
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Địa chỉ
+                      TextFormField(
+                        controller: _addressCtrl,
+                        textInputAction: TextInputAction.next,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Địa chỉ giao hàng',
+                          hintText: 'Số nhà, đường, phường/xã, quận/huyện...',
+                          prefixIcon: Icon(
+                            Icons.location_on_outlined,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Mã số thuế
+                      TextFormField(
+                        controller: _taxCodeCtrl,
+                        textInputAction: TextInputAction.next,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Mã số thuế',
+                          hintText: 'Mã số thuế doanh nghiệp (10 hoặc 13 số)',
+                          prefixIcon: Icon(
+                            Icons.receipt_long_outlined,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Ghi chú
+                      TextFormField(
+                        controller: _notesCtrl,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Ghi chú',
+                          hintText: 'Yêu cầu giao hàng hoặc thông tin thêm...',
+                          prefixIcon: Icon(Icons.notes_outlined, size: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Divider(height: 1, color: c.divider),
+
+            // Actions Footer
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: _saving ? null : () => Navigator.pop(context),
+                    child: const Text('Hủy'),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
+                    onPressed: _saving ? null : _submit,
+                    icon: _saving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.check, size: 18),
+                    label: Text(_saving ? 'Đang lưu...' : 'Lưu & Chọn vào đơn'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
