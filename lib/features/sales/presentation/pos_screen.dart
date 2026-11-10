@@ -865,7 +865,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     CartState cart,
     AsyncValue<Map<String, dynamic>> productsAsync,
   ) {
-    final hasActiveFilter = _search.isNotEmpty ||
+    final hasActiveFilter =
+        _search.isNotEmpty ||
         _tag.isNotEmpty ||
         _categoryId != null ||
         _inStockOnly;
@@ -886,10 +887,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   focusNode: _searchFocusNode,
                   decoration: InputDecoration(
                     hintText: 'Tìm theo tên sản phẩm, mã SKU hoặc quét mã',
-                    prefixIcon: const AppIcon(
-                      Icons.search_rounded,
-                      size: 19,
-                    ),
+                    prefixIcon: const AppIcon(Icons.search_rounded, size: 19),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 12,
@@ -904,10 +902,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                 _productPage = 1;
                               });
                             },
-                            icon: const AppIcon(
-                              Icons.close_rounded,
-                              size: 18,
-                            ),
+                            icon: const AppIcon(Icons.close_rounded, size: 18),
                           )
                         : null,
                   ),
@@ -1054,8 +1049,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 ),
                 labelStyle: TextStyle(
                   fontSize: 13,
-                  fontWeight:
-                      _inStockOnly ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: _inStockOnly
+                      ? FontWeight.bold
+                      : FontWeight.normal,
                   color: _inStockOnly ? Colors.white : c.textPrimary,
                 ),
               ),
@@ -1643,6 +1639,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                             .read(_cartProvider.notifier)
                             .setCustomer(null, null);
                       },
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       child: Text(
                         'Hủy',
                         style: TextStyle(color: AppColors.danger, fontSize: 12),
@@ -1651,29 +1652,73 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 ],
               ),
               const SizedBox(height: 4),
-              OutlinedButton(
-                onPressed: () => _showCustomerPicker(context),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 12,
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: cart.customerName != null
+                        ? AppColors.primary.withValues(alpha: 0.5)
+                        : c.divider,
                   ),
-                  alignment: Alignment.centerLeft,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  color: cart.customerName != null
+                      ? AppColors.primary.withValues(alpha: 0.04)
+                      : null,
                 ),
-                child: Text(
-                  cart.customerName ?? 'Khách lẻ (bấm để chọn khách quen)',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: cart.customerName == null
-                        ? c.textSecondary
-                        : c.textPrimary,
-                    fontWeight: cart.customerName == null
-                        ? FontWeight.normal
-                        : FontWeight.bold,
-                  ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _showCustomerPicker(context),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 13,
+                            horizontal: 12,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                cart.customerName != null
+                                    ? Icons.person
+                                    : Icons.person_outline,
+                                size: 18,
+                                color: cart.customerName != null
+                                    ? AppColors.primary
+                                    : c.textSecondary,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  cart.customerName ??
+                                      'Khách lẻ (bấm để chọn khách quen)',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: cart.customerName == null
+                                        ? c.textSecondary
+                                        : c.textPrimary,
+                                    fontWeight: cart.customerName == null
+                                        ? FontWeight.normal
+                                        : FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (cart.customerName != null)
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        tooltip: 'Bỏ chọn khách hàng',
+                        onPressed: () {
+                          ref
+                              .read(_cartProvider.notifier)
+                              .setCustomer(null, null);
+                        },
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -2223,7 +2268,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       showDialog(
         context: context,
         barrierDismissible: true,
-        builder: (_) => Dialog(
+        builder: (dialogCtx) => Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -2231,7 +2276,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
             child: _PosCustomerPickerContent(
-              onClose: () => Navigator.pop(context),
+              onClose: () => Navigator.of(dialogCtx).pop(),
             ),
           ),
         ),
@@ -2248,7 +2293,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        builder: (_) => const _PosCustomerPickerContent(),
+        builder: (sheetCtx) => _PosCustomerPickerContent(
+          onClose: () => Navigator.of(sheetCtx).pop(),
+        ),
       );
     }
   }
@@ -3022,7 +3069,15 @@ class _PosCustomerPickerContentState
               const SizedBox(width: 4),
               IconButton(
                 icon: const Icon(Icons.close),
-                onPressed: widget.onClose ?? () => Navigator.pop(context),
+                onPressed: () {
+                  if (widget.onClose != null) {
+                    widget.onClose!();
+                  } else if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    Navigator.of(context, rootNavigator: true).pop();
+                  }
+                },
                 tooltip: 'Đóng',
               ),
             ],
