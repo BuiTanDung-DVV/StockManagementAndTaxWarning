@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/assets/app_assets.dart';
+import '../../../core/assets/app_icon.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/providers/reporting_period_provider.dart';
 import '../../../core/theme/app_theme.dart';
@@ -772,9 +773,9 @@ class _SalesSummarySection extends ConsumerWidget {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(flex: 2, child: revenueChart),
+                      Expanded(flex: 5, child: revenueChart),
                       const SizedBox(width: AppSpacing.md),
-                      Expanded(child: paymentPanel),
+                      Expanded(flex: 3, child: paymentPanel),
                     ],
                   );
                 },
@@ -1599,6 +1600,10 @@ class _PaymentMethodBreakdown extends StatelessWidget {
       0,
       (sum, item) => sum + _paymentAmount(item),
     );
+    final totalCount = rows.fold<int>(
+      0,
+      (sum, item) => sum + (int.tryParse(item['count']?.toString() ?? '') ?? 0),
+    );
 
     return ChartCard(
       title: 'Tiền đã thu theo phương thức',
@@ -1615,17 +1620,137 @@ class _PaymentMethodBreakdown extends StatelessWidget {
               message: 'Chưa có thanh toán trong tháng.',
             )
           : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (var index = 0; index < visibleRows.length; index++) ...[
-                  _PaymentMethodRow(
-                    item: visibleRows[index],
-                    total: total,
-                    color: _paymentColor(context, index),
+                // Khối KPI tổng tiền & tổng lượt
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
                   ),
-                  if (index < visibleRows.length - 1)
-                    const SizedBox(height: AppSpacing.sm),
-                ],
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                    border: Border.all(
+                      color: colors.primary.withValues(alpha: 0.12),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Tổng thực thu',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: colors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            compactVietnameseCurrency(total),
+                            style: AppTheme.tabularStyle(
+                              context,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: colors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.surface,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: colors.divider),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AppIcon(
+                              Icons.receipt_long_outlined,
+                              size: 13,
+                              color: colors.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$totalCount lượt thu',
+                              style: AppTheme.tabularStyle(
+                                context,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: colors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Multi-segmented bar: Thanh phân bổ tỷ lệ tổng thể
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: SizedBox(
+                    height: 5,
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < visibleRows.length; i++)
+                          if (_paymentAmount(visibleRows[i]) > 0 &&
+                              total > 0) ...[
+                            Expanded(
+                              flex:
+                                  ((_paymentAmount(visibleRows[i]) / total) *
+                                          1000)
+                                      .toInt()
+                                      .clamp(1, 1000),
+                              child: Container(
+                                color: _paymentColor(
+                                  context,
+                                  i,
+                                  visibleRows[i]['method']?.toString(),
+                                ),
+                              ),
+                            ),
+                            if (i < visibleRows.length - 1)
+                              const SizedBox(width: 2),
+                          ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Danh sách chi tiết các phương thức thanh toán
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: visibleRows.length <= 2
+                        ? MainAxisAlignment.spaceEvenly
+                        : MainAxisAlignment.spaceBetween,
+                    children: [
+                      for (var index = 0; index < visibleRows.length; index++)
+                        _PaymentMethodRow(
+                          item: visibleRows[index],
+                          total: total,
+                          color: _paymentColor(
+                            context,
+                            index,
+                            visibleRows[index]['method']?.toString(),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ],
             ),
     );
@@ -1648,45 +1773,87 @@ class _PaymentMethodRow extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final amount = _paymentAmount(item);
     final share = total <= 0 ? 0.0 : amount / total;
+    final percentage = (share * 100).toStringAsFixed(1);
     final count = int.tryParse(item['count']?.toString() ?? '') ?? 0;
+    final methodKey =
+        item['method']?.toString() ??
+        item['paymentMethod']?.toString() ??
+        item['payment_method']?.toString();
+    final label = _paymentMethodLabel(methodKey);
+    final icon = _paymentMethodIcon(methodKey);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           children: [
-            Expanded(
+            Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Center(child: AppIcon(icon, size: 14, color: color)),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
               child: Text(
-                _paymentMethodLabel(
-                  item['method']?.toString() ??
-                      item['paymentMethod']?.toString() ??
-                      item['payment_method']?.toString(),
-                ),
+                label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colors.textPrimary,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
                 ),
               ),
             ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '$percentage%',
+                style: AppTheme.tabularStyle(
+                  context,
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const Spacer(),
             Text(
-              '${compactVietnameseAmount(amount)} ₫ · $count lượt',
+              '${compactVietnameseAmount(amount)} ₫',
               style: AppTheme.tabularStyle(
                 context,
-                color: colors.textSecondary,
-                fontSize: 11,
+                color: colors.textPrimary,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              ' · $count lượt',
+              style: AppTheme.tabularStyle(
+                context,
+                color: colors.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
         const SizedBox(height: 5),
         ClipRRect(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(3),
           child: LinearProgressIndicator(
             value: share.clamp(0, 1),
-            minHeight: 8,
+            minHeight: 5,
             backgroundColor: colors.cardAlt,
             valueColor: AlwaysStoppedAnimation(color),
           ),
@@ -1724,6 +1891,30 @@ String _normalizePaymentGroup(String? method) {
   }
 }
 
+IconData _paymentMethodIcon(String? method) {
+  switch (method?.toUpperCase()) {
+    case 'CASH':
+      return Icons.payments_outlined;
+    case 'BANK_TRANSFER':
+    case 'TRANSFER':
+    case 'QR':
+    case 'VIETQR':
+      return Icons.qr_code_2_rounded;
+    case 'CREDIT_CARD':
+    case 'CARD':
+    case 'POS':
+      return Icons.credit_card_rounded;
+    case 'DEBT':
+    case 'RECEIVABLE':
+      return Icons.receipt_long_outlined;
+    case 'MOMO':
+    case 'ZALOPAY':
+      return Icons.account_balance_wallet_outlined;
+    default:
+      return Icons.wallet_outlined;
+  }
+}
+
 String _paymentMethodLabel(String? method) {
   switch (method?.toUpperCase()) {
     case 'CASH':
@@ -1749,14 +1940,35 @@ String _paymentMethodLabel(String? method) {
   }
 }
 
-Color _paymentColor(BuildContext context, int index) {
-  final palette = <Color>[
-    Theme.of(context).colorScheme.primary,
-    AppColors.success,
-    AppColors.warning,
-    AppColors.info,
-  ];
-  return palette[index % palette.length];
+Color _paymentColor(BuildContext context, int index, [String? method]) {
+  switch (method?.toUpperCase()) {
+    case 'BANK_TRANSFER':
+    case 'TRANSFER':
+    case 'QR':
+    case 'VIETQR':
+      return Theme.of(context).colorScheme.primary;
+    case 'CASH':
+      return AppColors.success;
+    case 'CREDIT_CARD':
+    case 'CARD':
+    case 'POS':
+      return const Color(0xFF8B5CF6);
+    case 'DEBT':
+    case 'RECEIVABLE':
+      return AppColors.warning;
+    case 'MOMO':
+      return const Color(0xFFA50064);
+    case 'ZALOPAY':
+      return const Color(0xFF0068FF);
+    default:
+      final palette = <Color>[
+        Theme.of(context).colorScheme.primary,
+        AppColors.success,
+        AppColors.warning,
+        AppColors.info,
+      ];
+      return palette[index % palette.length];
+  }
 }
 
 class _SalesMetricCell extends StatelessWidget {

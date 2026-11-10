@@ -629,8 +629,9 @@ class MiniBarChart extends StatelessWidget {
         barTouchData: BarTouchData(
           touchCallback: (event, response) {
             final spot = response?.spot;
-            if (event is FlTapUpEvent && spot != null)
+            if (event is FlTapUpEvent && spot != null) {
               onBarTap?.call(spot.touchedBarGroupIndex);
+            }
           },
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (group) => c.surface,
@@ -776,144 +777,168 @@ class MiniGroupedBarChart extends StatelessWidget {
     var maxValue = allValues.reduce((a, b) => a > b ? a : b);
     minValue = minValue < 0 ? minValue * 1.15 : 0;
     maxValue = maxValue > 0 ? maxValue * 1.15 : 1;
-    final isCompact = MediaQuery.sizeOf(context).width < 600;
-    final rodWidth = isCompact
-        ? (count <= 7 ? 8.0 : 6.0)
-        : (count <= 7 ? 13.0 : 9.0);
-    final barsSpace = isCompact ? 2.5 : 4.0;
-    final leftReservedSize = isCompact ? 64.0 : 86.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final isWide = availableWidth >= 640;
+        final isMedium = availableWidth >= 440 && availableWidth < 640;
 
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+        // Tự động điều chỉnh độ rộng cột theo chiều ngang thực tế của container
+        final double rodWidth;
+        final double barsSpace;
+        final double leftReservedSize;
+
+        if (isWide) {
+          rodWidth = count <= 7 ? 22.0 : 15.0;
+          barsSpace = count <= 7 ? 6.0 : 4.0;
+          leftReservedSize = 84.0;
+        } else if (isMedium) {
+          rodWidth = count <= 7 ? 16.0 : 10.5;
+          barsSpace = count <= 7 ? 4.5 : 3.0;
+          leftReservedSize = 74.0;
+        } else {
+          rodWidth = count <= 7 ? 8.5 : 6.0;
+          barsSpace = 2.5;
+          leftReservedSize = 62.0;
+        }
+
+        return Column(
           children: [
-            _GroupedBarLegend(label: primaryLabel, color: primaryColor),
-            const SizedBox(width: 14),
-            _GroupedBarLegend(label: secondaryLabel, color: secondaryColor),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: BarChart(
-            BarChartData(
-              minY: minValue,
-              maxY: maxValue,
-              alignment: BarChartAlignment.spaceAround,
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                getDrawingHorizontalLine: (value) => FlLine(
-                  color: value == 0
-                      ? colors.textMuted.withValues(alpha: 0.45)
-                      : colors.divider.withValues(alpha: 0.2),
-                  strokeWidth: value == 0 ? 1.2 : 1,
-                ),
-              ),
-              borderData: FlBorderData(show: false),
-              titlesData: FlTitlesData(
-                rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: leftReservedSize,
-                    getTitlesWidget: (value, meta) {
-                      if (value == meta.max || value == meta.min) {
-                        return const SizedBox.shrink();
-                      }
-                      return SideTitleWidget(
-                        meta: meta,
-                        space: 8,
-                        child: Text(
-                          compactVietnameseCurrency(value),
-                          textAlign: TextAlign.right,
-                          style: AppTheme.tabularStyle(
-                            context,
-                            color: colors.textMuted,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      );
-                    },
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _GroupedBarLegend(label: primaryLabel, color: primaryColor),
+                const SizedBox(width: 14),
+                _GroupedBarLegend(label: secondaryLabel, color: secondaryColor),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: BarChart(
+                BarChartData(
+                  minY: minValue,
+                  maxY: maxValue,
+                  alignment: BarChartAlignment.spaceAround,
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: value == 0
+                          ? colors.textMuted.withValues(alpha: 0.45)
+                          : colors.divider.withValues(alpha: 0.2),
+                      strokeWidth: value == 0 ? 1.2 : 1,
+                    ),
                   ),
-                ),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 24,
-                    interval: 1,
-                    getTitlesWidget: (value, meta) {
-                      final index = value.toInt();
-                      if (index < 0 || index >= count) {
-                        return const SizedBox.shrink();
-                      }
-                      return SideTitleWidget(
-                        meta: meta,
-                        space: 7,
-                        child: Text(
-                          labels[index],
-                          style: TextStyle(
-                            color: colors.textMuted,
-                            fontSize: 9,
+                  borderData: FlBorderData(show: false),
+                  titlesData: FlTitlesData(
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: leftReservedSize,
+                        getTitlesWidget: (value, meta) {
+                          if (value == meta.max || value == meta.min) {
+                            return const SizedBox.shrink();
+                          }
+                          return SideTitleWidget(
+                            meta: meta,
+                            space: 8,
+                            child: Text(
+                              compactVietnameseCurrency(value),
+                              textAlign: TextAlign.right,
+                              style: AppTheme.tabularStyle(
+                                context,
+                                color: colors.textMuted,
+                                fontSize: isWide ? 10 : 9,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 24,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index < 0 || index >= count) {
+                            return const SizedBox.shrink();
+                          }
+                          return SideTitleWidget(
+                            meta: meta,
+                            space: 7,
+                            child: Text(
+                              labels[index],
+                              style: TextStyle(
+                                color: colors.textMuted,
+                                fontSize: isWide ? 10 : 9,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  barTouchData: BarTouchData(
+                    touchTooltipData: BarTouchTooltipData(
+                      fitInsideHorizontally: true,
+                      fitInsideVertically: true,
+                      getTooltipColor: (_) => const Color(0xFF1E293B),
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        final series = rodIndex == 0
+                            ? primaryLabel
+                            : secondaryLabel;
+                        return BarTooltipItem(
+                          '${labels[group.x]}\n$series: ${formatVietnameseCurrency(rod.toY)}',
+                          AppTheme.tabularStyle(
+                            context,
+                            color: Colors.white,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ),
-              barTouchData: BarTouchData(
-                touchTooltipData: BarTouchTooltipData(
-                  fitInsideHorizontally: true,
-                  fitInsideVertically: true,
-                  getTooltipColor: (_) => const Color(0xFF1E293B),
-                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                    final series = rodIndex == 0
-                        ? primaryLabel
-                        : secondaryLabel;
-                    return BarTooltipItem(
-                      '${labels[group.x]}\n$series: ${formatVietnameseCurrency(rod.toY)}',
-                      AppTheme.tabularStyle(
-                        context,
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  barGroups: List.generate(count, (index) {
+                    return BarChartGroupData(
+                      x: index,
+                      barsSpace: barsSpace,
+                      barRods: [
+                        BarChartRodData(
+                          toY: primaryValues[index],
+                          width: rodWidth,
+                          color: primaryColor,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(4),
+                          ),
+                        ),
+                        BarChartRodData(
+                          toY: secondaryValues[index],
+                          width: rodWidth,
+                          color: secondaryColor,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(4),
+                          ),
+                        ),
+                      ],
                     );
-                  },
+                  }),
                 ),
               ),
-              barGroups: List.generate(count, (index) {
-                return BarChartGroupData(
-                  x: index,
-                  barsSpace: barsSpace,
-                  barRods: [
-                    BarChartRodData(
-                      toY: primaryValues[index],
-                      width: rodWidth,
-                      color: primaryColor,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    BarChartRodData(
-                      toY: secondaryValues[index],
-                      width: rodWidth,
-                      color: secondaryColor,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ],
-                );
-              }),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
