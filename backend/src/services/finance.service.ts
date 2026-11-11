@@ -812,8 +812,46 @@ export class FinanceService {
             const transactions = await cashTxRepo.find({
                 where: { shopId, transactionDate: businessDate as any },
                 order: { createdAt: 'DESC' },
-                take: 20,
+                take: 50,
             });
+
+            const orders = await manager.query(`
+                SELECT 
+                    o.id, 
+                    o.order_code AS "orderCode", 
+                    o.total_amount AS "totalAmount", 
+                    o.status, 
+                    o.payment_method AS "paymentMethod",
+                    c.name AS "customerName",
+                    to_char(o.created_at, 'HH24:MI') AS "time"
+                FROM sales_orders o
+                LEFT JOIN customers c ON c.id = o.customer_id
+                WHERE o.shop_id = $1
+                  AND o.order_date >= $2
+                  AND o.order_date <= $3
+                  AND UPPER(COALESCE(o.status, '')) != 'CANCELLED'
+                ORDER BY o.created_at DESC
+                LIMIT 50
+            `, [shopId, fromDate, toDate]);
+
+            const returns = await manager.query(`
+                SELECT 
+                    r.id, 
+                    r.return_code AS "returnCode", 
+                    r.refund_amount AS "refundAmount", 
+                    r.reason, 
+                    r.status, 
+                    r.refund_method AS "refundMethod",
+                    o.order_code AS "orderCode",
+                    to_char(r.created_at, 'HH24:MI') AS "time"
+                FROM sales_returns r
+                LEFT JOIN sales_orders o ON o.id = r.order_id
+                WHERE r.shop_id = $1
+                  AND r.return_date >= $2
+                  AND r.return_date <= $3
+                ORDER BY r.created_at DESC
+                LIMIT 50
+            `, [shopId, fromDate, toDate]);
 
             const orderCount = Number(salesRows[0]?.orderCount || 0);
             const totalSales = Number(salesRows[0]?.totalSales || 0);
@@ -834,11 +872,77 @@ export class FinanceService {
                 orderCount,
                 transactionCount: Number(summary?.transactionCount || 0),
                 transactions, 
+                orders,
+                returns,
                 explanationThreshold,
                 closed: false 
             };
         }
-        return { ...closing, explanationThreshold, closed: true };
+
+        const closedSummary = await cashTxRepo.createQueryBuilder('t')
+            .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)", 'cashIncome')
+            .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)", 'cashExpense')
+            .addSelect("COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)", 'bankIncome')
+            .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)", 'bankExpense')
+            .where('t.shop_id = :shopId AND t.transaction_date = CAST(:businessDate AS date)', { shopId, businessDate })
+            .getRawOne();
+
+        const closedTransactions = await cashTxRepo.find({
+            where: { shopId, transactionDate: businessDate as any },
+            order: { createdAt: 'DESC' },
+            take: 50,
+        });
+
+        const closedOrders = await manager.query(`
+            SELECT 
+                o.id, 
+                o.order_code AS "orderCode", 
+                o.total_amount AS "totalAmount", 
+                o.status, 
+                o.payment_method AS "paymentMethod",
+                c.name AS "customerName",
+                to_char(o.created_at, 'HH24:MI') AS "time"
+            FROM sales_orders o
+            LEFT JOIN customers c ON c.id = o.customer_id
+            WHERE o.shop_id = $1
+              AND o.order_date >= $2
+              AND o.order_date <= $3
+              AND UPPER(COALESCE(o.status, '')) != 'CANCELLED'
+            ORDER BY o.created_at DESC
+            LIMIT 50
+        `, [shopId, fromDate, toDate]);
+
+        const closedReturns = await manager.query(`
+            SELECT 
+                r.id, 
+                r.return_code AS "returnCode", 
+                r.refund_amount AS "refundAmount", 
+                r.reason, 
+                r.status, 
+                r.refund_method AS "refundMethod",
+                o.order_code AS "orderCode",
+                to_char(r.created_at, 'HH24:MI') AS "time"
+            FROM sales_returns r
+            LEFT JOIN sales_orders o ON o.id = r.order_id
+            WHERE r.shop_id = $1
+              AND r.return_date >= $2
+              AND r.return_date <= $3
+            ORDER BY r.created_at DESC
+            LIMIT 50
+        `, [shopId, fromDate, toDate]);
+
+        return { 
+            ...closing, 
+            cashIncome: Number(closedSummary?.cashIncome || 0),
+            cashExpense: Number(closedSummary?.cashExpense || 0),
+            bankIncome: Number(closedSummary?.bankIncome || 0),
+            bankExpense: Number(closedSummary?.bankExpense || 0),
+            transactions: closedTransactions,
+            orders: closedOrders,
+            returns: closedReturns,
+            explanationThreshold, 
+            closed: true 
+        };
     }
     async createDailyClosing(shopId: number, dto: Partial<DailyClosing>) {
         assertPastOrToday(dto.closingDate || new Date(), 'Ngày chốt sổ');

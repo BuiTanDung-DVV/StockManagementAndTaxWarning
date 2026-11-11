@@ -2,6 +2,7 @@ import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
@@ -183,6 +184,8 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
               final orderCount = (data['orderCount'] as num?)?.toInt() ?? 0;
               final closed = data['closed'] == true;
               final transactions = data['transactions'] as List? ?? [];
+              final orders = data['orders'] as List? ?? [];
+              final returns = data['returns'] as List? ?? [];
 
               // Opening & expected cash calculations from backend
               final openingCash = asNum(data['openingCash']);
@@ -326,21 +329,48 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                           'Tiền mặt đầu ca (A)',
                           _fmt(closedOpeningCash),
                           true,
+                          onTap: () => _showOpeningCashDetail(
+                            context: context,
+                            openingCash: closedOpeningCash.toDouble(),
+                          ),
                         ),
                         _DetailRow(
                           'Thu tiền mặt trong ca (+)',
                           _fmt(cashIncome),
                           true,
+                          onTap: () => _showCashTransactionsDetail(
+                            context: context,
+                            title: 'Chi tiết thu tiền mặt trong ca',
+                            isIncome: true,
+                            total: cashIncome.toDouble(),
+                            transactions: transactions,
+                          ),
                         ),
                         _DetailRow(
                           'Chi tiền mặt trong ca (-)',
                           _fmt(cashExpense),
                           false,
+                          onTap: () => _showCashTransactionsDetail(
+                            context: context,
+                            title: 'Chi tiết chi tiền mặt trong ca',
+                            isIncome: false,
+                            total: cashExpense.toDouble(),
+                            transactions: transactions,
+                          ),
                         ),
                         _DetailRow(
                           'Tiền mặt sổ sách dự kiến (B)',
                           _fmt(closedExpectedCash),
                           true,
+                          onTap: () => _showExpectedCashDetail(
+                            context: context,
+                            expectedCash: closedExpectedCash.toDouble(),
+                            openingCash: closedOpeningCash.toDouble(),
+                            cashIncome: cashIncome.toDouble(),
+                            cashExpense: cashExpense.toDouble(),
+                            explanationThreshold: explanationThreshold
+                                .toDouble(),
+                          ),
                         ),
                         _DetailRow(
                           'Tiền mặt thực tế kiểm kê (C)',
@@ -539,49 +569,107 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Expected Summary Cards
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(22),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.08,
-                          ),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
+                      Material(
+                        color: Colors.transparent,
+                        child: Ink(
+                          decoration: BoxDecoration(
                             color: theme.colorScheme.primary.withValues(
-                              alpha: 0.15,
+                              alpha: 0.08,
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.15,
+                              ),
                             ),
                           ),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              'TIỀN MẶT DỰ KIẾN HÔM NAY',
-                              style: GoogleFonts.manrope(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.primary,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(24),
+                            onTap: () => _showExpectedCashDetail(
+                              context: context,
+                              expectedCash: expectedCash.toDouble(),
+                              openingCash: openingCash.toDouble(),
+                              cashIncome: cashIncome.toDouble(),
+                              cashExpense: cashExpense.toDouble(),
+                              explanationThreshold: explanationThreshold
+                                  .toDouble(),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(22),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'TIỀN MẶT DỰ KIẾN HÔM NAY',
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      AppIcon(
+                                        Icons.info_outline,
+                                        size: 15,
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _fmt(expectedCash),
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 30,
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tiền đầu ngày + Thu tiền mặt − Chi tiền mặt',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: c.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'Bấm để xem cơ cấu đối soát dòng tiền két',
+                                          style: TextStyle(
+                                            color: theme.colorScheme.primary,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        AppIcon(
+                                          Icons.chevron_right,
+                                          size: 14,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _fmt(expectedCash),
-                              style: GoogleFonts.manrope(
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Tiền đầu ngày + Thu tiền mặt − Chi tiền mặt',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: c.textSecondary,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -594,18 +682,36 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                             _fmt(openingCash),
                             c.textPrimary,
                             Icons.account_balance_wallet,
+                            onTap: () => _showOpeningCashDetail(
+                              context: context,
+                              openingCash: openingCash.toDouble(),
+                            ),
                           ),
                           _SummaryTile(
                             'Thu tiền mặt',
                             _fmt(cashIncome),
                             AppColors.success,
                             Icons.add_circle_outline,
+                            onTap: () => _showCashTransactionsDetail(
+                              context: context,
+                              title: 'Chi tiết thu tiền mặt trong ca',
+                              isIncome: true,
+                              total: cashIncome.toDouble(),
+                              transactions: transactions,
+                            ),
                           ),
                           _SummaryTile(
                             'Chi tiền mặt',
                             _fmt(cashExpense),
                             AppColors.danger,
                             Icons.remove_circle_outline,
+                            onTap: () => _showCashTransactionsDetail(
+                              context: context,
+                              title: 'Chi tiết chi tiền mặt trong ca',
+                              isIncome: false,
+                              total: cashExpense.toDouble(),
+                              transactions: transactions,
+                            ),
                           ),
                         ],
                       ),
@@ -626,12 +732,23 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                             _fmt(totalSales),
                             theme.colorScheme.primary,
                             Icons.receipt_long_outlined,
+                            onTap: () => _showOrdersDetail(
+                              context: context,
+                              totalSales: totalSales.toDouble(),
+                              orderCount: orderCount,
+                              orders: orders,
+                            ),
                           ),
                           _SummaryTile(
                             'Giá trị hàng trả',
                             _fmt(totalReturns),
                             AppColors.warning,
                             Icons.assignment_return_outlined,
+                            onTap: () => _showReturnsDetail(
+                              context: context,
+                              totalReturns: totalReturns.toDouble(),
+                              returns: returns,
+                            ),
                           ),
                           _SummaryTile(
                             'Đơn hợp lệ',
@@ -640,6 +757,12 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                             ).format(orderCount),
                             c.textPrimary,
                             Icons.shopping_bag_outlined,
+                            onTap: () => _showOrdersDetail(
+                              context: context,
+                              totalSales: totalSales.toDouble(),
+                              orderCount: orderCount,
+                              orders: orders,
+                            ),
                           ),
                         ],
                       ),
@@ -988,8 +1111,9 @@ class _ClosingMetricGroup extends StatelessWidget {
             decoration: BoxDecoration(
               color: c.card,
               border: Border.all(color: c.divider),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
             ),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
                 for (var i = 0; i < children.length; i++) ...[
@@ -1000,6 +1124,7 @@ class _ClosingMetricGroup extends StatelessWidget {
                     children[i].color,
                     children[i].icon,
                     compact: true,
+                    onTap: children[i].onTap,
                   ),
                 ],
               ],
@@ -1027,12 +1152,15 @@ class _SummaryTile extends StatelessWidget {
   final Color color;
   final IconData icon;
   final bool compact;
+  final VoidCallback? onTap;
+
   const _SummaryTile(
     this.label,
     this.value,
     this.color,
     this.icon, {
     this.compact = false,
+    this.onTap,
   });
 
   @override
@@ -1046,8 +1174,16 @@ class _SummaryTile extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(color: c.textSecondary, fontSize: 13),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
+        if (onTap != null)
+          AppIcon(
+            Icons.chevron_right,
+            size: 16,
+            color: c.textSecondary.withValues(alpha: 0.5),
+          ),
       ],
     );
     final valueWidget = Text(
@@ -1059,27 +1195,55 @@ class _SummaryTile extends StatelessWidget {
         color: color,
       ),
     );
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: compact
-          ? null
-          : BoxDecoration(
-              color: c.card,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: c.divider),
-            ),
-      child: compact
-          ? Row(
+
+    final innerChild = compact
+        ? Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
               children: [
                 Expanded(flex: 6, child: labelWidget),
                 const SizedBox(width: 12),
                 Expanded(flex: 5, child: valueWidget),
               ],
-            )
-          : Column(
+            ),
+          )
+        : Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [labelWidget, const SizedBox(height: 10), valueWidget],
             ),
+          );
+
+    final cardDecoration = BoxDecoration(
+      color: c.card,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: c.divider),
+    );
+
+    if (compact) {
+      if (onTap != null) {
+        return Tooltip(
+          message: 'Bấm để xem chi tiết $label',
+          child: InkWell(onTap: onTap, child: innerChild),
+        );
+      }
+      return innerChild;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: Tooltip(
+        message: 'Bấm để xem chi tiết $label',
+        child: Ink(
+          decoration: cardDecoration,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onTap,
+            child: innerChild,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1087,12 +1251,14 @@ class _SummaryTile extends StatelessWidget {
 class _DetailRow extends StatelessWidget {
   final String label, amount;
   final bool isIncome;
-  const _DetailRow(this.label, this.amount, this.isIncome);
+  final VoidCallback? onTap;
+
+  const _DetailRow(this.label, this.amount, this.isIncome, {this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    return Container(
+    final content = Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1124,8 +1290,1112 @@ class _DetailRow extends StatelessWidget {
               color: isIncome ? AppColors.success : AppColors.danger,
             ),
           ),
+          if (onTap != null) ...[
+            const SizedBox(width: 6),
+            AppIcon(
+              Icons.chevron_right,
+              size: 16,
+              color: c.textSecondary.withValues(alpha: 0.4),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    if (onTap != null) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: content,
+      );
+    }
+    return content;
+  }
+}
+
+void _showDailyClosingDetailModal(
+  BuildContext context, {
+  required String title,
+  required IconData icon,
+  required Widget content,
+  Widget? bottomAction,
+}) {
+  final c = AppThemeColors.of(context);
+  final isDesktop = MediaQuery.sizeOf(context).width >= 600;
+
+  Widget buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: AppIcon(icon, color: AppColors.primary, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: GoogleFonts.manrope(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: c.textPrimary,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const AppIcon(Icons.close, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
+            tooltip: 'Đóng',
+          ),
         ],
       ),
     );
   }
+
+  Widget buildBody() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        buildHeader(),
+        Divider(height: 1, color: c.divider.withValues(alpha: 0.6)),
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: content,
+          ),
+        ),
+        if (bottomAction != null) ...[
+          Divider(height: 1, color: c.divider.withValues(alpha: 0.6)),
+          Padding(padding: const EdgeInsets.all(16), child: bottomAction),
+        ],
+      ],
+    );
+  }
+
+  if (isDesktop) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        backgroundColor: c.card,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 580,
+            maxHeight: MediaQuery.sizeOf(ctx).height * 0.85,
+          ),
+          child: buildBody(),
+        ),
+      ),
+    );
+  } else {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: c.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(ctx).height * 0.85,
+        ),
+        child: buildBody(),
+      ),
+    );
+  }
+}
+
+void _showExpectedCashDetail({
+  required BuildContext context,
+  required double expectedCash,
+  required double openingCash,
+  required double cashIncome,
+  required double cashExpense,
+  required double explanationThreshold,
+}) {
+  final c = AppThemeColors.of(context);
+  final theme = Theme.of(context);
+  final fmt = NumberFormat.currency(
+    locale: 'vi_VN',
+    symbol: '₫',
+    decimalDigits: 0,
+  );
+
+  _showDailyClosingDetailModal(
+    context,
+    title: 'Cơ cấu Tiền mặt Dự kiến Tại Két',
+    icon: Icons.calculate_outlined,
+    content: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: theme.colorScheme.primary.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Column(
+            children: [
+              Text(
+                'TIỀN MẶT DỰ KIẾN TRONG KÉT',
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                fmt.format(expectedCash),
+                style: GoogleFonts.manrope(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Số dư lý thuyết trên sổ sách cần có trong két khi kết ca',
+                style: TextStyle(fontSize: 12, color: c.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        Text(
+          'Công thức tính đối soát',
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: c.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildFormulaRow(
+          context,
+          icon: Icons.account_balance_wallet_outlined,
+          iconColor: c.textPrimary,
+          label: 'Tiền mặt đầu ngày (A)',
+          sub: 'Số dư thực tế bàn giao từ ca trước',
+          amount: fmt.format(openingCash),
+          amountColor: c.textPrimary,
+          prefix: '+ ',
+        ),
+        const SizedBox(height: 8),
+        _buildFormulaRow(
+          context,
+          icon: Icons.add_circle_outline,
+          iconColor: AppColors.success,
+          label: 'Thu tiền mặt trong ca (+)',
+          sub: 'Tổng các khoản tiền mặt đã thu trong ngày',
+          amount: fmt.format(cashIncome),
+          amountColor: AppColors.success,
+          prefix: '+ ',
+        ),
+        const SizedBox(height: 8),
+        _buildFormulaRow(
+          context,
+          icon: Icons.remove_circle_outline,
+          iconColor: AppColors.danger,
+          label: 'Chi tiền mặt trong ca (-)',
+          sub: 'Tổng các khoản tiền mặt đã chi trong ngày',
+          amount: fmt.format(cashExpense),
+          amountColor: AppColors.danger,
+          prefix: '- ',
+        ),
+        const SizedBox(height: 12),
+        Divider(color: c.divider),
+        const SizedBox(height: 8),
+        _buildFormulaRow(
+          context,
+          icon: Icons.savings_outlined,
+          iconColor: theme.colorScheme.primary,
+          label: 'Tiền mặt dự kiến (B = A + Thu - Chi)',
+          sub: 'Số tiền đối chiếu với két kiểm kê thực tế',
+          amount: fmt.format(expectedCash),
+          amountColor: theme.colorScheme.primary,
+          prefix: '= ',
+          isTotal: true,
+        ),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: c.card,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppIcon(
+                Icons.info_outline,
+                size: 18,
+                color: AppColors.warning,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Khi kết ca, vui lòng kiểm kê tiền mặt thực tế trong két và nhập vào ô đối soát. Nếu chênh lệch > ${fmt.format(explanationThreshold)}, hệ thống sẽ yêu cầu nhập giải trình lý do trước khi khóa sổ.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: c.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showOpeningCashDetail({
+  required BuildContext context,
+  required double openingCash,
+}) {
+  final c = AppThemeColors.of(context);
+  final fmt = NumberFormat.currency(
+    locale: 'vi_VN',
+    symbol: '₫',
+    decimalDigits: 0,
+  );
+
+  _showDailyClosingDetailModal(
+    context,
+    title: 'Chi tiết Tiền Mặt Đầu Ngày',
+    icon: Icons.account_balance_wallet,
+    content: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: c.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: c.divider),
+          ),
+          child: Column(
+            children: [
+              AppIcon(
+                Icons.account_balance_wallet,
+                size: 36,
+                color: AppColors.primary,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Số dư tiền mặt đầu ngày',
+                style: TextStyle(fontSize: 13, color: c.textSecondary),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                fmt.format(openingCash),
+                style: GoogleFonts.manrope(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: c.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        Text(
+          'Quy tắc xác định số dư đầu ngày',
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: c.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildInfoBullet(
+          context,
+          title: 'Kết chuyển từ ca trước:',
+          desc:
+              'Số tiền mặt đầu ngày được chuyển tiếp trực tiếp từ số tiền mặt kiểm kê thực tế tại két khi chốt ca hôm trước.',
+        ),
+        const SizedBox(height: 10),
+        _buildInfoBullet(
+          context,
+          title: 'Đảm bảo tính liên tục:',
+          desc:
+              'Dòng tiền két được xâu chuỗi liên tục giữa các phiên làm việc, giúp phát hiện sớm chênh lệch hoặc thất thoát tiền mặt.',
+        ),
+        const SizedBox(height: 10),
+        _buildInfoBullet(
+          context,
+          title: 'Khởi tạo số dư ban đầu:',
+          desc:
+              'Nếu là ngày đầu tiên sử dụng phần mềm, số tiền này được lấy từ Số dư đầu kỳ thiết lập tại phân hệ Sổ quỹ.',
+        ),
+      ],
+    ),
+    bottomAction: OutlinedButton.icon(
+      onPressed: () {
+        Navigator.of(context).pop();
+        context.push('/finance');
+      },
+      icon: const AppIcon(Icons.account_balance_wallet_outlined, size: 18),
+      label: const Text('Xem Sổ quỹ chi tiết'),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    ),
+  );
+}
+
+void _showCashTransactionsDetail({
+  required BuildContext context,
+  required String title,
+  required bool isIncome,
+  required double total,
+  required List<dynamic> transactions,
+}) {
+  final c = AppThemeColors.of(context);
+  final color = isIncome ? AppColors.success : AppColors.danger;
+  final icon = isIncome
+      ? Icons.arrow_downward_rounded
+      : Icons.arrow_upward_rounded;
+  final fmt = NumberFormat.currency(
+    locale: 'vi_VN',
+    symbol: '₫',
+    decimalDigits: 0,
+  );
+
+  final list = transactions.where((t) {
+    final type = t['type']?.toString().toUpperCase();
+    final method = (t['paymentMethod'] ?? 'CASH').toString().toUpperCase();
+    final matchesType = isIncome ? type == 'INCOME' : type == 'EXPENSE';
+    final matchesMethod = method == 'CASH';
+    return matchesType && matchesMethod;
+  }).toList();
+
+  _showDailyClosingDetailModal(
+    context,
+    title: title,
+    icon: icon,
+    content: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isIncome ? 'Tổng thu tiền mặt' : 'Tổng chi tiền mặt',
+                    style: TextStyle(fontSize: 12, color: c.textSecondary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    fmt.format(total),
+                    style: GoogleFonts.manrope(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${list.length} giao dịch',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (list.isEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Column(
+              children: [
+                AppIcon(
+                  Icons.receipt_long_outlined,
+                  size: 48,
+                  color: c.textSecondary.withValues(alpha: 0.4),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  isIncome
+                      ? 'Chưa ghi nhận khoản thu tiền mặt nào hôm nay'
+                      : 'Chưa ghi nhận khoản chi tiền mặt nào hôm nay',
+                  style: TextStyle(fontSize: 13, color: c.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: list.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, idx) {
+              final item = list[idx];
+              final amount = asNum(item['amount']);
+              final category = item['category']?.toString();
+              final counterparty = item['counterparty']?.toString();
+              final desc = item['description']?.toString();
+              final refCode = item['referenceCode']?.toString();
+              final dateStr =
+                  item['createdAt']?.toString() ??
+                  item['transactionDate']?.toString();
+
+              String timeDisplay = '';
+              if (dateStr != null && dateStr.isNotEmpty) {
+                try {
+                  final dt = DateTime.parse(dateStr).toLocal();
+                  timeDisplay = DateFormat('HH:mm').format(dt);
+                } catch (_) {
+                  timeDisplay = '';
+                }
+              }
+
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: c.card,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: c.divider.withValues(alpha: 0.6)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: AppIcon(icon, color: color, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            financeCategoryLabel(category),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            [
+                              if (timeDisplay.isNotEmpty) timeDisplay,
+                              if (counterparty != null &&
+                                  counterparty.isNotEmpty)
+                                counterparty,
+                              if (refCode != null && refCode.isNotEmpty)
+                                refCode,
+                            ].join(' • '),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: c.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (desc != null &&
+                              desc.isNotEmpty &&
+                              desc != counterparty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              desc,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: c.textSecondary.withValues(alpha: 0.8),
+                                fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '${isIncome ? '+' : '-'}${fmt.format(amount)}',
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ],
+    ),
+    bottomAction: ElevatedButton.icon(
+      onPressed: () {
+        Navigator.of(context).pop();
+        context.push('/finance');
+      },
+      icon: const AppIcon(Icons.account_balance_wallet_outlined, size: 18),
+      label: const Text('Xem tất cả tại Sổ Quỹ'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    ),
+  );
+}
+
+void _showOrdersDetail({
+  required BuildContext context,
+  required double totalSales,
+  required int orderCount,
+  required List<dynamic> orders,
+}) {
+  final c = AppThemeColors.of(context);
+  final theme = Theme.of(context);
+  final fmt = NumberFormat.currency(
+    locale: 'vi_VN',
+    symbol: '₫',
+    decimalDigits: 0,
+  );
+
+  _showDailyClosingDetailModal(
+    context,
+    title: 'Hoạt Động Đơn Hàng Hôm Nay',
+    icon: Icons.receipt_long_outlined,
+    content: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: theme.colorScheme.primary.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tổng giá trị đơn lập',
+                    style: TextStyle(fontSize: 12, color: c.textSecondary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    fmt.format(totalSales),
+                    style: GoogleFonts.manrope(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$orderCount đơn hợp lệ',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (orders.isEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Column(
+              children: [
+                AppIcon(
+                  Icons.shopping_bag_outlined,
+                  size: 48,
+                  color: c.textSecondary.withValues(alpha: 0.4),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Chưa có đơn hàng nào được lập trong ngày hôm nay',
+                  style: TextStyle(fontSize: 13, color: c.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: orders.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, idx) {
+              final o = orders[idx];
+              final code = o['orderCode']?.toString() ?? 'Đơn hàng';
+              final customer = o['customerName']?.toString() ?? 'Khách lẻ';
+              final time = o['time']?.toString() ?? '';
+              final amount = asNum(o['totalAmount']);
+              final method = o['paymentMethod']?.toString() ?? 'CASH';
+
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: c.card,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: c.divider.withValues(alpha: 0.6)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: AppIcon(
+                        Icons.receipt_outlined,
+                        color: theme.colorScheme.primary,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                code,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (time.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  '• $time',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: c.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$customer • ${method == 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: c.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      fmt.format(amount),
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+        const SizedBox(height: 14),
+        Text(
+          'Đơn lập trong ngày chưa trừ hàng trả. Không tính các đơn đã hủy.',
+          style: TextStyle(
+            fontSize: 11,
+            color: c.textSecondary,
+            fontStyle: FontStyle.italic,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ),
+    bottomAction: ElevatedButton.icon(
+      onPressed: () {
+        Navigator.of(context).pop();
+        context.push('/sales');
+      },
+      icon: const AppIcon(Icons.list_alt_rounded, size: 18),
+      label: const Text('Xem Quản lý Đơn hàng'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    ),
+  );
+}
+
+void _showReturnsDetail({
+  required BuildContext context,
+  required double totalReturns,
+  required List<dynamic> returns,
+}) {
+  final c = AppThemeColors.of(context);
+  final fmt = NumberFormat.currency(
+    locale: 'vi_VN',
+    symbol: '₫',
+    decimalDigits: 0,
+  );
+
+  _showDailyClosingDetailModal(
+    context,
+    title: 'Hàng Khách Trả Hôm Nay',
+    icon: Icons.assignment_return_outlined,
+    content: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.warning.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.warning.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tổng giá trị hàng trả',
+                    style: TextStyle(fontSize: 12, color: c.textSecondary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    fmt.format(totalReturns),
+                    style: GoogleFonts.manrope(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.warning,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${returns.length} phiếu trả',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.warning,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (returns.isEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Column(
+              children: [
+                AppIcon(
+                  Icons.assignment_turned_in_outlined,
+                  size: 48,
+                  color: c.textSecondary.withValues(alpha: 0.4),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Hôm nay không có phát sinh trả hàng',
+                  style: TextStyle(fontSize: 13, color: c.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: returns.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, idx) {
+              final r = returns[idx];
+              final code = r['returnCode']?.toString() ?? 'Phiếu trả';
+              final orderCode = r['orderCode']?.toString();
+              final reason = r['reason']?.toString() ?? 'Khách trả hàng';
+              final time = r['time']?.toString() ?? '';
+              final amount = asNum(r['refundAmount']);
+              final method = r['refundMethod']?.toString() ?? 'CASH';
+
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: c.card,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: c.divider.withValues(alpha: 0.6)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const AppIcon(
+                        Icons.assignment_return_outlined,
+                        color: AppColors.warning,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                code,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (time.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  '• $time',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: c.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            [
+                              if (orderCode != null && orderCode.isNotEmpty)
+                                'Đơn: $orderCode',
+                              reason,
+                              method == 'CASH' ? 'Tiền mặt' : 'Chuyển khoản',
+                            ].join(' • '),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: c.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      fmt.format(amount),
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.warning,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+        const SizedBox(height: 14),
+        Text(
+          'Hàng trả tính sau giảm giá, gồm thuế hàng hóa; không gồm phí giao. Tiền hoàn đã tính trong chi.',
+          style: TextStyle(
+            fontSize: 11,
+            color: c.textSecondary,
+            fontStyle: FontStyle.italic,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ),
+    bottomAction: ElevatedButton.icon(
+      onPressed: () {
+        Navigator.of(context).pop();
+        context.push('/sales');
+      },
+      icon: const AppIcon(Icons.assignment_return_outlined, size: 18),
+      label: const Text('Xem Quản lý Đơn hàng & Trả hàng'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.warning,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    ),
+  );
+}
+
+Widget _buildFormulaRow(
+  BuildContext context, {
+  required IconData icon,
+  required Color iconColor,
+  required String label,
+  required String sub,
+  required String amount,
+  required Color amountColor,
+  required String prefix,
+  bool isTotal = false,
+}) {
+  final c = AppThemeColors.of(context);
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: isTotal
+        ? BoxDecoration(
+            color: iconColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+          )
+        : null,
+    child: Row(
+      children: [
+        AppIcon(icon, size: 18, color: iconColor),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
+                  color: c.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(sub, style: TextStyle(fontSize: 11, color: c.textSecondary)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          '$prefix$amount',
+          style: GoogleFonts.manrope(
+            fontSize: isTotal ? 16 : 14,
+            fontWeight: FontWeight.bold,
+            color: amountColor,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildInfoBullet(
+  BuildContext context, {
+  required String title,
+  required String desc,
+}) {
+  final c = AppThemeColors.of(context);
+  return Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: c.card,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          desc,
+          style: TextStyle(fontSize: 12, color: c.textSecondary, height: 1.4),
+        ),
+      ],
+    ),
+  );
 }
