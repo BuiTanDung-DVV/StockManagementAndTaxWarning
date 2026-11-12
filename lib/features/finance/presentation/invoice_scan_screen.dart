@@ -72,12 +72,16 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
       initialDateRange: _range,
       helpText: 'Lọc theo ngày quét',
     );
-    if (selected != null && mounted)
+    if (selected != null && mounted) {
       setState(() {
         _range = selected;
         page = 1;
       });
+    }
   }
+
+  Widget _scanThumbnailPlaceholder() =>
+      const Center(child: AppIcon(Icons.receipt_long_outlined, size: 22));
 
   Widget _filters() => AppCardContainer(
     child: Padding(
@@ -97,7 +101,7 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
             },
             onSubmitted: (_) => _applySearch(),
             decoration: InputDecoration(
-              labelText: 'Tìm mã quét, số hóa đơn hoặc đối tác',
+              hintText: 'Tìm mã quét, số hóa đơn hoặc đối tác',
               counterText: '',
               prefixIcon: const AppIcon(Icons.search),
               suffixIcon: IconButton(
@@ -119,7 +123,7 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
                   key: ValueKey(_statusFilter),
                   initialValue: _statusFilter ?? '',
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Trạng thái'),
+                  decoration: const InputDecoration(isDense: true),
                   items: const [
                     DropdownMenuItem(
                       value: '',
@@ -154,6 +158,7 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
               ),
               OutlinedButton.icon(
                 onPressed: _chooseDates,
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
                 icon: const AppIcon(Icons.date_range_outlined),
                 label: Text(
                   _range == null
@@ -287,34 +292,28 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
                                       await context.push(
                                         '/invoice-scans/${item['id']}',
                                       );
-                                      if (mounted)
+                                      if (mounted) {
                                         ref.invalidate(
                                           filteredInvoiceScanListProvider,
                                         );
+                                      }
                                     },
-                                    leading: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: hasImg
-                                          ? Image.network(
-                                              imgUrl,
-                                              width: 52,
-                                              height: 52,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, _, _) =>
-                                                  const SizedBox(
-                                                    width: 52,
-                                                    child: AppIcon(
-                                                      Icons
-                                                          .receipt_long_outlined,
-                                                    ),
-                                                  ),
-                                            )
-                                          : const SizedBox(
-                                              width: 52,
-                                              child: AppIcon(
-                                                Icons.receipt_long_outlined,
-                                              ),
-                                            ),
+                                    leading: SizedBox.square(
+                                      dimension: 48,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: ColoredBox(
+                                          color: c.surface,
+                                          child: hasImg
+                                              ? Image.network(
+                                                  imgUrl,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, _, _) =>
+                                                      _scanThumbnailPlaceholder(),
+                                                )
+                                              : _scanThumbnailPlaceholder(),
+                                        ),
+                                      ),
                                     ),
                                     title: Text(
                                       (item['invoice'] is Map
@@ -391,8 +390,9 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
     final shopId = ref.read(shopProvider).currentShopId;
     if (uploading ||
         shopId == null ||
-        !ref.read(shopProvider).hasPermission('finance', 'edit'))
+        !ref.read(shopProvider).hasPermission('finance', 'edit')) {
       return;
+    }
     bool current() =>
         mounted &&
         ref.read(shopProvider).currentShopId == shopId &&
@@ -442,10 +442,11 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
       final scan = await ref
           .read(invoiceScanRepositoryProvider)
           .upload(bytes, file.name, type);
+      if (!mounted || !current()) return;
       ref.invalidate(filteredInvoiceScanListProvider);
       ref.invalidate(invoiceScanListProvider);
-      if (current()) _clearFilters();
-      if (current()) context.push('/invoice-scans/${scan['id']}');
+      _clearFilters();
+      context.push('/invoice-scans/${scan['id']}');
     } catch (error) {
       ToastService.showError(
         error is ApiException

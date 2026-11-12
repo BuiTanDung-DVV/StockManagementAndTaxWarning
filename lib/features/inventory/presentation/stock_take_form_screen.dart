@@ -86,8 +86,18 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
     });
   }
 
-  void _matchAll() {
-    if (_items.isEmpty) return;
+  Future<void> _matchAll() async {
+    if (!_items.any((item) => item.diff != 0)) return;
+    final confirmed = await AppConfirmModal.show(
+      context,
+      title: 'Đặt lại số lượng kiểm đếm?',
+      message:
+          'Số lượng thực tế của tất cả dòng sẽ được đặt bằng tồn sổ sách. Các số đã nhập khác tồn sổ sách sẽ bị ghi đè.',
+      confirmText: 'Đặt lại số lượng',
+      cancelText: 'Giữ số đã nhập',
+      isDestructive: true,
+    );
+    if (!mounted || confirmed != true) return;
     setState(() {
       for (var item in _items) {
         item.matchSystem();
@@ -109,7 +119,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
       cancelText: 'Giữ lại',
       isDestructive: true,
     );
-    if (confirm == true) {
+    if (mounted && confirm == true) {
       setState(() {
         for (var i in _items) {
           i.dispose();

@@ -761,27 +761,33 @@ class _XntProductTable extends StatelessWidget {
         border: Border.all(color: colors.divider.withValues(alpha: 0.5)),
       ),
       clipBehavior: Clip.antiAlias,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(colors.surface),
-          columnSpacing: 24,
-          columns: [
-            DataColumn(label: header('Mã SP')),
-            DataColumn(label: header('Tên sản phẩm')),
-            DataColumn(label: header('Đơn vị')),
-            DataColumn(label: header('Tồn đầu')),
-            DataColumn(label: header('Nhập')),
-            DataColumn(label: header('Xuất')),
-            DataColumn(label: header('Tồn cuối')),
-          ],
-          rows: items.map<DataRow>((rawItem) {
-            final item = Map<String, dynamic>.from(rawItem as Map);
-            final sku = item['sku'] ?? item['productCode'] ?? '';
-            final name = item['productName'] ?? item['name'] ?? '';
-            final unit = item['unit']?.toString() ?? 'Đơn vị';
-            Text quantity(dynamic value, {Color? color, bool bold = false}) =>
-                Text(
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(colors.surface),
+              columnSpacing: 24,
+              columns: [
+                DataColumn(label: header('Mã SP')),
+                DataColumn(label: header('Tên sản phẩm')),
+                DataColumn(label: header('Đơn vị')),
+                DataColumn(label: header('Tồn đầu'), numeric: true),
+                DataColumn(label: header('Nhập'), numeric: true),
+                DataColumn(label: header('Xuất'), numeric: true),
+                DataColumn(label: header('Tồn cuối'), numeric: true),
+              ],
+              rows: items.map<DataRow>((rawItem) {
+                final item = Map<String, dynamic>.from(rawItem as Map);
+                final sku = item['sku'] ?? item['productCode'] ?? '';
+                final name = item['productName'] ?? item['name'] ?? '';
+                final unit = item['unit']?.toString() ?? 'Đơn vị';
+                Text quantity(
+                  dynamic value, {
+                  Color? color,
+                  bool bold = false,
+                }) => Text(
                   formatXntQuantity(value),
                   style: GoogleFonts.inter(
                     fontSize: 11,
@@ -789,45 +795,47 @@ class _XntProductTable extends StatelessWidget {
                     fontWeight: bold ? FontWeight.bold : FontWeight.normal,
                   ),
                 );
-            return DataRow(
-              cells: [
-                DataCell(Text(sku.toString())),
-                DataCell(
-                  SizedBox(
-                    width: 180,
-                    child: Text(
-                      name.toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                return DataRow(
+                  cells: [
+                    DataCell(Text(sku.toString())),
+                    DataCell(
+                      SizedBox(
+                        width: 230,
+                        child: Text(
+                          name.toString(),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                DataCell(Text(unit)),
-                DataCell(quantity(item['openingStock'])),
-                DataCell(
-                  quantity(
-                    item['imported'] ?? item['totalImport'],
-                    color: AppColors.success,
-                    bold: true,
-                  ),
-                ),
-                DataCell(
-                  quantity(
-                    item['exported'] ?? item['totalExport'],
-                    color: AppColors.warning,
-                    bold: true,
-                  ),
-                ),
-                DataCell(
-                  quantity(
-                    item['closingStock'],
-                    color: colors.textPrimary,
-                    bold: true,
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
+                    DataCell(Text(unit)),
+                    DataCell(quantity(item['openingStock'])),
+                    DataCell(
+                      quantity(
+                        item['imported'] ?? item['totalImport'],
+                        color: AppColors.success,
+                        bold: true,
+                      ),
+                    ),
+                    DataCell(
+                      quantity(
+                        item['exported'] ?? item['totalExport'],
+                        color: AppColors.warning,
+                        bold: true,
+                      ),
+                    ),
+                    DataCell(
+                      quantity(
+                        item['closingStock'],
+                        color: colors.textPrimary,
+                        bold: true,
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
         ),
       ),
     );
