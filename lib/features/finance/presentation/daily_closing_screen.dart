@@ -153,7 +153,8 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
         centerTitle: true,
         actions: [featureGuideButton(context, 'daily_closing')],
       ),
-      body: Center(
+      body: Align(
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1040),
           child: closingAsync.when(
@@ -568,6 +569,21 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(
+                        'Ngày kết ca: ${today.split('-').reversed.join('/')}',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Tiền đầu ngày là số dư chuyển sang. Thu và chi bên dưới chỉ tính tiền mặt phát sinh trong ngày này.',
+                      ),
+                      const SizedBox(height: 16),
+                      if (cashIncome == 0 && cashExpense == 0) ...[
+                        const Text(
+                          'Trong ngày này, sổ chưa ghi thu hoặc chi tiền mặt.',
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       // Expected Summary Cards
                       Material(
                         color: Colors.transparent,

@@ -283,262 +283,271 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Period label styled like a premium badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AppIcon(
-                          Icons.date_range_rounded,
-                          size: 14,
-                          color: theme.colorScheme.primary,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1440),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Period label styled like a premium badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
                         ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            'Kỳ báo cáo: ${period.from} → ${period.to}',
-                            style: GoogleFonts.manrope(
-                              fontSize: 12,
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.08,
                           ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Các thẻ đếm SKU, không cộng lẫn số lượng khác đơn vị tính.
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isCompact = constraints.maxWidth < 680;
-                      final cards = [
-                        _MiniCard(
-                          'SKU có tồn đầu',
-                          '$openingSkuCount',
-                          AppColors.info,
-                        ),
-                        _MiniCard(
-                          'SKU có nhập',
-                          '$importedSkuCount',
-                          AppColors.success,
-                        ),
-                        _MiniCard(
-                          'SKU có xuất',
-                          '$exportedSkuCount',
-                          AppColors.warning,
-                        ),
-                        _MiniCard(
-                          'SKU còn tồn',
-                          '$closingSkuCount',
-                          AppColors.primary,
-                        ),
-                      ];
-
-                      if (isCompact) {
-                        return Column(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(child: cards[0]),
-                                const SizedBox(width: 8),
-                                Expanded(child: cards[1]),
-                              ],
+                            AppIcon(
+                              Icons.date_range_rounded,
+                              size: 14,
+                              color: theme.colorScheme.primary,
                             ),
-                            const SizedBox(height: 8),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(child: cards[2]),
-                                const SizedBox(width: 8),
-                                Expanded(child: cards[3]),
-                              ],
-                            ),
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: cards[0]),
-                          const SizedBox(width: 8),
-                          Expanded(child: cards[1]),
-                          const SizedBox(width: 8),
-                          Expanded(child: cards[2]),
-                          const SizedBox(width: 8),
-                          Expanded(child: cards[3]),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Title
-                  Text(
-                    'Chi tiết sản phẩm',
-                    style: GoogleFonts.manrope(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  if (items.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 32),
-                      child: Center(
-                        child: AppEmpty(
-                          visual: AppEmptyVisual.document,
-                          message: 'Không có dữ liệu phát sinh trong kỳ',
-                          subtitle:
-                              'Thử chọn khoảng thời gian khác hoặc kiểm tra lại các phát sinh nhập xuất kho.',
-                        ),
-                      ),
-                    )
-                  else
-                    LayoutBuilder(
-                      builder: (context, constraints) =>
-                          xntUsesCardLayout(constraints.maxWidth)
-                          ? _XntProductCards(items: pageItems)
-                          : _XntProductTable(items: pageItems),
-                    ),
-                  if (items.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    AppPaginationBar(
-                      currentPage: currentPage,
-                      totalPages: totalPages,
-                      totalItems: items.length,
-                      itemLabel: 'sản phẩm',
-                      onPageChanged: (page) => setState(() => _page = page),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-
-                  // Slow-moving warnings
-                  Text(
-                    'Cảnh báo hàng chậm luân chuyển',
-                    style: GoogleFonts.manrope(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.warning,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  slowAsync.when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => AppInlineError(
-                      message:
-                          'Không tải được cảnh báo hàng chậm luân chuyển. Vui lòng thử lại sau.',
-                      onRetry: () => ref.invalidate(slowMovingProvider),
-                    ),
-                    data: (slowItems) {
-                      if (slowItems.isEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          child: Text(
-                            'Không có sản phẩm chậm luân chuyển nào được phát hiện.',
-                            style: GoogleFonts.inter(
-                              color: c.textSecondary,
-                              fontSize: 13,
-                            ),
-                          ),
-                        );
-                      }
-                      return Column(
-                        children: slowItems.take(5).map<Widget>((item) {
-                          final name =
-                              item['productName'] ?? item['name'] ?? 'SP';
-                          final qty =
-                              item['quantity'] ?? item['currentStock'] ?? 0;
-                          final unit = item['unit']?.toString() ?? 'đơn vị';
-                          final days =
-                              item['daysUnsold'] ??
-                              item['daysSinceLastSale'] ??
-                              0;
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: c.card,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: AppColors.warning.withValues(alpha: 0.2),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                'Kỳ báo cáo: ${period.from} → ${period.to}',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                            child: Row(
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Các thẻ đếm SKU, không cộng lẫn số lượng khác đơn vị tính.
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isCompact = constraints.maxWidth < 680;
+                          final cards = [
+                            _MiniCard(
+                              'SKU có tồn đầu',
+                              '$openingSkuCount',
+                              AppColors.info,
+                            ),
+                            _MiniCard(
+                              'SKU có nhập',
+                              '$importedSkuCount',
+                              AppColors.success,
+                            ),
+                            _MiniCard(
+                              'SKU có xuất',
+                              '$exportedSkuCount',
+                              AppColors.warning,
+                            ),
+                            _MiniCard(
+                              'SKU còn tồn',
+                              '$closingSkuCount',
+                              AppColors.primary,
+                            ),
+                          ];
+
+                          if (isCompact) {
+                            return Column(
                               children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        name,
-                                        style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                          color: c.textPrimary,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Tồn vướng kho: ${formatXntQuantity(qty)} $unit',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          color: c.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: cards[0]),
+                                    const SizedBox(width: 8),
+                                    Expanded(child: cards[1]),
+                                  ],
                                 ),
-                                const SizedBox(width: 12),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.warning.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    '$days ngày đọng',
-                                    style: GoogleFonts.manrope(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.warning,
-                                    ),
-                                  ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: cards[2]),
+                                    const SizedBox(width: 8),
+                                    Expanded(child: cards[3]),
+                                  ],
                                 ),
                               ],
-                            ),
+                            );
+                          }
+
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: cards[0]),
+                              const SizedBox(width: 8),
+                              Expanded(child: cards[1]),
+                              const SizedBox(width: 8),
+                              Expanded(child: cards[2]),
+                              const SizedBox(width: 8),
+                              Expanded(child: cards[3]),
+                            ],
                           );
-                        }).toList(),
-                      );
-                    },
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Title
+                      Text(
+                        'Chi tiết sản phẩm',
+                        style: GoogleFonts.manrope(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: c.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      if (items.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32),
+                          child: Center(
+                            child: AppEmpty(
+                              visual: AppEmptyVisual.document,
+                              message: 'Không có dữ liệu phát sinh trong kỳ',
+                              subtitle:
+                                  'Thử chọn khoảng thời gian khác hoặc kiểm tra lại các phát sinh nhập xuất kho.',
+                            ),
+                          ),
+                        )
+                      else
+                        LayoutBuilder(
+                          builder: (context, constraints) =>
+                              xntUsesCardLayout(constraints.maxWidth)
+                              ? _XntProductCards(items: pageItems)
+                              : _XntProductTable(items: pageItems),
+                        ),
+                      if (items.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        AppPaginationBar(
+                          currentPage: currentPage,
+                          totalPages: totalPages,
+                          totalItems: items.length,
+                          itemLabel: 'sản phẩm',
+                          onPageChanged: (page) => setState(() => _page = page),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+
+                      // Slow-moving warnings
+                      Text(
+                        'Cảnh báo hàng chậm luân chuyển',
+                        style: GoogleFonts.manrope(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.warning,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      slowAsync.when(
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (e, _) => AppInlineError(
+                          message:
+                              'Không tải được cảnh báo hàng chậm luân chuyển. Vui lòng thử lại sau.',
+                          onRetry: () => ref.invalidate(slowMovingProvider),
+                        ),
+                        data: (slowItems) {
+                          if (slowItems.isEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Text(
+                                'Không có sản phẩm chậm luân chuyển nào được phát hiện.',
+                                style: GoogleFonts.inter(
+                                  color: c.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            );
+                          }
+                          return Column(
+                            children: slowItems.take(5).map<Widget>((item) {
+                              final name =
+                                  item['productName'] ?? item['name'] ?? 'SP';
+                              final qty =
+                                  item['quantity'] ?? item['currentStock'] ?? 0;
+                              final unit = item['unit']?.toString() ?? 'đơn vị';
+                              final days =
+                                  item['daysUnsold'] ??
+                                  item['daysSinceLastSale'] ??
+                                  0;
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: c.card,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: AppColors.warning.withValues(
+                                      alpha: 0.2,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            name,
+                                            style: GoogleFonts.inter(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                              color: c.textPrimary,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Tồn vướng kho: ${formatXntQuantity(qty)} $unit',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color: c.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.warning.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        '$days ngày đọng',
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.warning,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                ],
+                ),
               ),
             ),
           );

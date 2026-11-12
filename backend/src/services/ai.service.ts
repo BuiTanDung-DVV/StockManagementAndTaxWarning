@@ -331,20 +331,8 @@ ${knowledgeContext}
 
     const genAI = new GoogleGenerativeAI(key);
     const modelCandidates = requiresLegalSources
-      ? [
-        'gemini-2.0-flash',
-        'gemini-1.5-flash',
-        'gemini-1.5-flash-latest',
-        'gemini-1.5-pro',
-      ]
-      : [
-        'gemini-2.0-flash',
-        'gemini-1.5-flash',
-        'gemini-1.5-flash-latest',
-        'gemini-1.5-flash-8b',
-        'gemini-1.5-pro',
-        'gemini-2.0-flash-lite',
-      ];
+      ? ['gemini-2.5-flash', 'gemini-3.5-flash']
+      : ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 
     let lastError: any;
     for (const modelName of modelCandidates) {
@@ -416,7 +404,7 @@ Người dùng hỏi: ${dto.question}`;
         }
       } catch (err: any) {
         lastError = err;
-        console.warn(`Gemini Model ${modelName} call failed:`, err?.message || err);
+        console.warn(`Gemini Model ${modelName} call failed`, { status: err?.status, name: err?.name });
       }
     }
 
