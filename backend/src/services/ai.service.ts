@@ -41,6 +41,7 @@ export interface AiAdvisorResult {
 }
 
 export class AiService {
+  private readonly quotaCooldownUntil = new Map<string, number>();
   private knowledgeRepo = AppDataSource.getRepository(AiKnowledgeDocument);
   private salesService = new SalesService();
 
@@ -331,12 +332,25 @@ ${knowledgeContext}
 
     const genAI = new GoogleGenerativeAI(key);
     const modelCandidates = requiresLegalSources
-      ? ['gemini-2.5-flash', 'gemini-3.5-flash']
-      : ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+      ? ['gemini-2.5-flash', 'gemini-2.5-flash-lite']
+      : [
+        'gemini-3.5-flash-lite',
+        'gemini-3.1-flash-lite',
+        'gemini-3.6-flash',
+        'gemini-3.8-flash',
+        'gemini-2.5-flash-lite',
+        'gemini-2.5-flash',
+      ];
 
     let lastError: any;
+    let encounteredQuotaLimit = false;
     for (const modelName of modelCandidates) {
-      const timeoutMs = Math.min(20000, remainingMs());
+      const quotaKey = `${requiresLegalSources ? 'search' : 'chat'}:${modelName}`;
+      if ((this.quotaCooldownUntil.get(quotaKey) ?? 0) > Date.now()) {
+        encounteredQuotaLimit = true;
+        continue;
+      }
+      const timeoutMs = Math.min(requiresLegalSources ? 16000 : 10000, remainingMs());
       try {
         const historyPrompt = dto.history && dto.history.length > 0
           ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
@@ -404,13 +418,17 @@ Người dùng hỏi: ${dto.question}`;
         }
       } catch (err: any) {
         lastError = err;
+        const message = String(err?.message ?? '');
+        if (Number(err?.status) === 429 || /\b429\b|resource_exhausted|quota|rate limit/i.test(message)) {
+          encounteredQuotaLimit = true;
+          this.quotaCooldownUntil.set(quotaKey, Date.now() + 60000);
+        }
         console.warn(`Gemini Model ${modelName} call failed`, { status: err?.status, name: err?.name });
       }
     }
 
-    const errStr = (lastError?.message || '').toLowerCase();
-    if (errStr.includes('429') || errStr.includes('quota') || errStr.includes('rate limit')) {
-      throw new Error('Hệ thống Google AI đang tạm thời vượt quá lượt truy vấn trong phút. Vui lòng đợi 15-30 giây rồi gửi lại câu hỏi.');
+    if (encounteredQuotaLimit) {
+      throw new Error('Các model AI phù hợp đang bận hoặc đã chạm giới hạn của dự án Google. Vui lòng thử lại sau.');
     }
 
     console.error('Gemini Models failed', { status: lastError?.status, name: lastError?.name });
