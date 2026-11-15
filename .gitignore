@@ -192,3 +192,34 @@ test/ui_audit_*/
 /assets/icon/asset_sources.json
 /assets/icon/README.md
 
+
+# Local release staging, database copies and thesis deliverables
+/-smartstock-pos-*/
+/.codex/
+/.claude/
+*.dump
+*.bak
+*.sql.gz
+*.apk
+*.aab
+*.docx
+*.pptx
+*.xlsx
+!/assets/templates/*.xlsx
+
+# Credentials and local account lists
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+*[Tt]ai[Kk]hoan[Kk]iem[Tt]hu*
+
+# Demo/test data maintenance scripts (keep schema, migrations and reference data)
+/backend/src/scripts/seed-*-year-store.ts
+/backend/src/scripts/seed-test-*.ts
+/backend/src/scripts/seed-slow-moving-products.ts
+/backend/src/scripts/extend-test-store-data.ts
+/backend/src/scripts/audit-test-shop-*.ts
+/backend/src/scripts/repair-test-shop-*.ts
