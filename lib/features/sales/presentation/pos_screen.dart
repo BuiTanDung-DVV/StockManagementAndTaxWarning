@@ -2372,6 +2372,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     );
   }
 
+  ({String key, String code, int amount})? _transferQuote;
+
   Future<void> _processPayment(String method) async {
     final cart = ref.read(_cartProvider);
     if (cart.items.isEmpty || _creating) return;
@@ -2445,33 +2447,76 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         'settleInFull': method == 'CASH',
         'paidAmount': 0,
       };
-      final result = await ref.read(salesRepoProvider).create(payload);
-      if (!mounted || ref.read(offlineScopeProvider)?.key != scope.key) return;
-      final orderCode = result['orderCode']?.toString() ?? '';
+      final transfer = method == 'BANK_TRANSFER';
+      if (transfer) {
+        final quoteKey = jsonEncode([scope.key, bankId, accountNo, payload]);
+        bool current() =>
+            mounted && ref.read(offlineScopeProvider)?.key == scope.key;
+        final api = ref.read(apiClientProvider);
+        final transferPayload = {
+          ...payload,
+          'paymentMethod': 'TRANSFER',
+          'status': 'DELIVERED',
+          'settleInFull': true,
+        };
+        if (_transferQuote?.key != quoteKey) {
+          final quote = await api.postInShop(
+            '/sales-orders/transfer-quote',
+            '${scope.shopId}',
+            transferPayload,
+            isCurrentScope: current,
+          );
+          if (!current()) return;
+          final code = quote['orderCode'] as String;
+          final total = quote['totalAmount'] as int;
+          _transferQuote = (key: quoteKey, code: code, amount: total);
+        }
+        final quote = _transferQuote!;
+        if (!mounted) return;
+        final paid = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => QrPaymentScreen(
+              orderCode: quote.code,
+              totalAmount: quote.amount.toDouble(),
+              bankId: bankId,
+              accountNo: accountNo,
+              accountName: accountName,
+              onConfirm: () async {
+                await api.postInShop('/sales-orders', '${scope.shopId}', {
+                  ...transferPayload,
+                  'orderCode': quote.code,
+                  'expectedQrTotal': quote.amount,
+                  'qrPaymentRef': quote.code,
+                }, isCurrentScope: current);
+              },
+            ),
+          ),
+        );
+        if (!current()) return;
+        if (paid != true) return;
+      } else {
+        await ref.read(salesRepoProvider).create(payload);
+        if (!mounted || ref.read(offlineScopeProvider)?.key != scope.key) {
+          return;
+        }
+      }
 
+      _transferQuote = null;
       ref.invalidate(customerOptionsProvider);
       if (cart.customerId != null) {
         ref.invalidate(customerDetailProvider(cart.customerId!));
         ref.invalidate(customerReceivablesProvider(cart.customerId!));
       }
-      final orderId = result['id'] as int;
-      final serverTotal = TypeParser.asDouble(
-        result['totalAmount'] ?? result['total_amount'] ?? cart.total,
-      );
+      ref.read(_cartProvider.notifier).clear();
+      ref.invalidate(salesListProvider);
+      ref.invalidate(salesSummaryProvider);
+      ref.invalidate(productListProvider);
+      ref.invalidate(lowStockProvider);
+      ref.invalidate(taxObligationsProvider);
+      ref.invalidate(customerListProvider);
+      ref.invalidate(cashAccountsProvider);
 
-      if (method == 'CASH' || method == 'DEBT') {
-        // Cash or debt payment - done immediately.
-        ref.read(_cartProvider.notifier).clear();
-
-        // Trigger UI updates across the app (Inventory, Finance, Sales Summary, Sales List)
-        ref.invalidate(salesListProvider);
-        ref.invalidate(salesSummaryProvider);
-        ref.invalidate(productListProvider);
-        ref.invalidate(lowStockProvider);
-        ref.invalidate(taxObligationsProvider);
-        ref.invalidate(customerListProvider); // to update customer debt
-        ref.invalidate(cashAccountsProvider);
-
+      if (!transfer) {
         unawaited(
           (method == 'CASH'
                   ? SalesPaymentSound.cashReceived
@@ -2490,33 +2535,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               backgroundColor: AppColors.success,
             ),
           );
-        }
-      } else if (method == 'BANK_TRANSFER') {
-        // The order is already saved. Returning from QR must not submit this cart again.
-        ref.read(_cartProvider.notifier).clear();
-        ref.invalidate(salesListProvider);
-        ref.invalidate(salesSummaryProvider);
-        ref.invalidate(productListProvider);
-        ref.invalidate(lowStockProvider);
-        ref.invalidate(customerListProvider);
-        if (mounted) {
-          final paid = await Navigator.of(context).push<bool>(
-            MaterialPageRoute(
-              builder: (_) => QrPaymentScreen(
-                orderId: orderId,
-                orderCode: orderCode,
-                totalAmount: serverTotal,
-                bankId: bankId,
-                accountNo: accountNo,
-                accountName: accountName,
-              ),
-            ),
-          );
-          if (paid != true && mounted) {
-            ToastService.showSuccess(
-              'Đơn đã lưu, chưa xác nhận thu tiền. Mở lại từ danh sách chứng từ.',
-            );
-          }
         }
       }
     } catch (e) {

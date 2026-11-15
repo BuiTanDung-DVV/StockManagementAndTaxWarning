@@ -15,6 +15,7 @@ router.get('/sales-orders/top-products', requirePermission(['sales', 'finance', 
 router.get('/sales-orders/top-returns', requirePermission(['sales', 'finance', 'dashboard'], 'view', { allowAllShops: true }), salesCtrl.topReturnedProducts);
 router.get('/sales-orders/:id/payment-attempts/:operationId', requirePermission('sales', 'edit'), salesOrderPaymentStatus);
 router.get('/sales-orders/:id', requirePermission('sales', 'view'), salesCtrl.findOne);
+router.post('/sales-orders/transfer-quote', requirePermission('sales', 'edit'), salesCtrl.quoteTransfer);
 router.post('/sales-orders', requirePermission('sales', 'edit'), salesCtrl.create);
 router.put('/sales-orders/:id', requirePermission('sales', 'edit'), salesCtrl.updateOrder);
 router.post('/sales-orders/:id/cancel', requirePermission('sales', 'edit'), salesCtrl.cancel);

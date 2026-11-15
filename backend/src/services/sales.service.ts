@@ -684,13 +684,18 @@ export class SalesService {
     async createForActor(shopId: number, dto: any, actor: SalesWriteActor) {
         return this.create(shopId, { ...dto, createdBy: actor.id }, undefined, actor);
     }
+    async quoteTransferForActor(shopId: number, dto: any, actor: SalesWriteActor) {
+        return this.create(shopId, dto, undefined, actor, true);
+    }
     async cancelForActor(shopId: number, id: number, actor: SalesWriteActor) {
         return this.cancel(shopId, id, actor.id, actor);
     }
     async createReturnForActor(shopId: number, id: number, dto: any, actor: SalesWriteActor) {
         return this.createReturn(shopId, id, { ...dto, createdBy: actor.id }, actor);
     }
-    async create(shopId: number, dto: any, externalRunner?: QueryRunner, actor?: SalesWriteActor) {
+    async create(shopId: number, dto: any, externalRunner?: QueryRunner, actor?: SalesWriteActor): Promise<SalesOrder | Awaited<ReturnType<SalesService['findById']>>>;
+    async create(shopId: number, dto: any, externalRunner: undefined, actor: SalesWriteActor, quoteTransfer: true): Promise<{ orderCode: string; totalAmount: number }>;
+    async create(shopId: number, dto: any, externalRunner?: QueryRunner, actor?: SalesWriteActor, quoteTransfer = false) {
         const queryRunner = externalRunner ?? AppDataSource.createQueryRunner();
         if (!externalRunner) {
             await queryRunner.connect();
@@ -701,6 +706,30 @@ export class SalesService {
             if (actor) await manager.query("SET LOCAL lock_timeout = '5s'");
             await lockShopMutation(manager, shopId);
             const member = actor ? await requireSalesWriteAuthority(manager, shopId, actor) : undefined;
+
+            const confirmingTransfer = !quoteTransfer && !externalRunner && actor && dto.expectedQrTotal !== undefined;
+            if (confirmingTransfer) {
+                if (dto.paymentMethod !== 'TRANSFER' || dto.settleInFull !== true
+                    || !/^QR[0-9a-f]{18}$/.test(String(dto.orderCode))
+                    || !Number.isSafeInteger(dto.expectedQrTotal) || dto.expectedQrTotal <= 0) {
+                    throw new Error('Validation: Thông tin xác nhận chuyển khoản không hợp lệ');
+                }
+                const existing = await manager.findOne(SalesOrder, {
+                    where: { shopId, orderCode: dto.orderCode },
+                    relations: ['customer'],
+                });
+                if (existing) {
+                    if (Number(existing.createdBy) !== actor.id || existing.status === 'CANCELLED'
+                        || existing.paymentMethod !== 'TRANSFER'
+                        || Number(existing.totalAmount) !== dto.expectedQrTotal
+                        || Number(existing.paidAmount) !== dto.expectedQrTotal
+                        || Number(existing.customer?.id || 0) !== Number(dto.customerId || 0)) {
+                        throw new Error('Validation: Mã chuyển khoản đã được sử dụng. Hãy đối chiếu đơn bán.');
+                    }
+                    await queryRunner.commitTransaction();
+                    return this.findById(shopId, existing.id);
+                }
+            }
 
             const orderDate = assertPastOrToday(dto.orderDate || new Date(), 'Ngày chứng từ');
             if (member) await requireOpenSalesDay(manager, shopId, orderDate, member.memberType);
@@ -820,6 +849,16 @@ export class SalesService {
                 : 0;
             const customerShippingCharge = shippingFeePayer === 'CUSTOMER' ? shippingFee + shippingTaxAmount : 0;
             const totalAmount = merchandiseTotal + customerShippingCharge;
+            if (quoteTransfer) {
+                if (!Number.isSafeInteger(totalAmount) || totalAmount <= 0) {
+                    throw new Error('Validation: Số tiền chuyển khoản phải là số nguyên VND lớn hơn 0');
+                }
+                await queryRunner.rollbackTransaction();
+                return { orderCode: 'QR' + randomBytes(9).toString('hex'), totalAmount };
+            }
+            if (confirmingTransfer && totalAmount !== dto.expectedQrTotal) {
+                throw new Error('Validation: Tổng tiền đã thay đổi. Hãy đối chiếu khoản chuyển trước khi ghi đơn.');
+            }
             const paidAmount = dto.settleInFull === true
                 ? totalAmount
                 : Number(dto.paidAmount || 0);

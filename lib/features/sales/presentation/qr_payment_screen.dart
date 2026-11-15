@@ -5,17 +5,13 @@ import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
-import '../../products/providers/product_provider.dart';
-import '../../inventory/providers/inventory_provider.dart';
-import '../../finance/providers/finance_provider.dart';
-import '../providers/sales_provider.dart';
 import '../services/sales_payment_sound.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -25,7 +21,7 @@ final _currFmt = NumberFormat.currency(
 );
 
 class QrPaymentScreen extends ConsumerStatefulWidget {
-  final int orderId;
+  final Future<void> Function() onConfirm;
   final String orderCode;
   final double totalAmount;
   final String bankId;
@@ -34,7 +30,7 @@ class QrPaymentScreen extends ConsumerStatefulWidget {
 
   const QrPaymentScreen({
     super.key,
-    required this.orderId,
+    required this.onConfirm,
     required this.orderCode,
     required this.totalAmount,
     required this.bankId,
@@ -50,37 +46,23 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
   bool _confirming = false;
   bool _paid = false;
 
-  String get _qrUrl {
-    final name = Uri.encodeComponent(widget.accountName);
-    final amount = widget.totalAmount.toInt();
-    return 'https://img.vietqr.io/image/${widget.bankId}-${widget.accountNo}-compact2.png'
-        '?amount=$amount&addInfo=${widget.orderCode}&accountName=$name';
-  }
+  String get _qrUrl => Uri.https(
+    'img.vietqr.io',
+    '/image/${widget.bankId}-${widget.accountNo}-qr_only.svg',
+    {
+      'amount': widget.totalAmount.toInt().toString(),
+      'addInfo': widget.orderCode,
+      if (widget.accountName.isNotEmpty) 'accountName': widget.accountName,
+    },
+  ).toString();
 
   Future<void> _confirmPayment() async {
+    if (_confirming || _paid) return;
     setState(() => _confirming = true);
     try {
-      await ref
-          .read(apiClientProvider)
-          .post(
-            '/sales-orders/${widget.orderId}/payments',
-            data: {
-              'amount': widget.totalAmount,
-              'method': 'TRANSFER',
-              'referenceCode': widget.orderCode,
-              'notes': 'Xác nhận thanh toán qua mã QR',
-            },
-          );
+      await widget.onConfirm();
       if (!mounted) return;
       setState(() => _paid = true);
-
-      // Trigger UI updates across the app
-      ref.invalidate(salesListProvider);
-      ref.invalidate(salesSummaryProvider);
-      ref.invalidate(productListProvider);
-      ref.invalidate(lowStockProvider);
-      ref.invalidate(taxObligationsProvider);
-      ref.invalidate(cashAccountsProvider);
 
       unawaited(SalesPaymentSound.transferReceived.play());
 
@@ -89,34 +71,13 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
     } catch (e) {
       if (mounted) {
         ToastService.showError(
-          'Không thể xác nhận thanh toán. Vui lòng thử lại sau.',
+          e is ApiException && [400, 403, 404].contains(e.statusCode)
+              ? e.message
+              : 'Chưa xác nhận được kết quả. Hãy thử lại với cùng mã chuyển khoản.',
         );
       }
     } finally {
       if (mounted) setState(() => _confirming = false);
-    }
-  }
-
-  Future<void> _cancelOrder() async {
-    final confirm = await AppConfirmModal.show(
-      context,
-      title: 'Hủy đơn hàng?',
-      message:
-          'Bạn có chắc chắn muốn hủy đơn hàng này không? Dữ liệu không thể khôi phục.',
-      confirmText: 'Hủy đơn',
-      cancelText: 'Không',
-      isDestructive: true,
-    );
-    if (confirm != true) return;
-    try {
-      await ref
-          .read(apiClientProvider)
-          .post('/sales-orders/${widget.orderId}/cancel');
-      if (mounted) Navigator.of(context).pop(false);
-    } catch (e) {
-      if (mounted) {
-        ToastService.showError('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
-      }
     }
   }
 
@@ -126,7 +87,10 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      PopScope(canPop: !_confirming, child: _buildContent(context));
+
+  Widget _buildContent(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
 
@@ -201,7 +165,9 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
         leading: Navigator.of(context).canPop()
             ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  if (!_confirming) Navigator.of(context).pop();
+                },
               )
             : null,
         title: Text(
@@ -306,7 +272,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'Mã đơn: ${widget.orderCode}',
+                              'Mã chuyển khoản: ${widget.orderCode}',
                               style: GoogleFonts.manrope(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -362,22 +328,19 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
+                          child: SvgPicture.network(
                             _qrUrl,
                             width: 240,
                             height: 240,
-                            loadingBuilder: (_, child, progress) =>
-                                progress == null
-                                ? child
-                                : const SizedBox(
-                                    width: 240,
-                                    height: 240,
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 3,
-                                      ),
-                                    ),
-                                  ),
+                            placeholderBuilder: (_) => const SizedBox(
+                              width: 240,
+                              height: 240,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                ),
+                              ),
+                            ),
                             errorBuilder: (_, e, s) => SizedBox(
                               width: 240,
                               height: 240,
@@ -392,7 +355,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                                     ),
                                     const SizedBox(height: 12),
                                     Text(
-                                      'Không tải được mã QR\nKiểm tra lại cấu hình NH',
+                                      'Không tải được ảnh QR. Bạn có thể chuyển khoản theo thông tin bên dưới.',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 13,
@@ -520,14 +483,16 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                 const SizedBox(height: 12),
 
                 OutlinedButton.icon(
-                  onPressed: _cancelOrder,
+                  onPressed: _confirming
+                      ? null
+                      : () => Navigator.of(context).pop(false),
                   icon: const AppIcon(
                     Icons.cancel_outlined,
                     size: 20,
                     color: AppColors.danger,
                   ),
                   label: Text(
-                    'Hủy đơn hàng này',
+                    'Quay lại giỏ hàng',
                     style: GoogleFonts.manrope(
                       color: AppColors.danger,
                       fontWeight: FontWeight.bold,

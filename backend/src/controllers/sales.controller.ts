@@ -110,6 +110,16 @@ export const findOne = async (req: Request, res: Response) => {
     }
 };
 
+export const quoteTransfer = async (req: Request, res: Response) => {
+    const auth = req as AuthRequest;
+    try {
+        const data = await salesService.quoteTransferForActor(Number(auth.shopId), req.body, {
+            id: Number(auth.user?.sub), authVersion: Number(auth.user?.ver),
+        });
+        res.json({ success: true, data });
+    } catch (error) { sendServiceError(res, error); }
+};
+
 export const create = async (req: Request, res: Response) => {
     try { 
         res.json({ success: true, data: await salesService.createForActor((req as any).shopId, req.body, { id: Number((req as any).user?.sub), authVersion: Number((req as any).user?.ver) }) }); 
