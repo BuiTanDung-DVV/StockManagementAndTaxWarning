@@ -11,8 +11,71 @@ import '../../features/products/models/product_import.dart';
 import '../../features/products/models/inventory_export.dart';
 import 'finance_display.dart';
 import 'report_xlsx_builder.dart';
+import 'report_xlsx_writer.dart';
 
 class ExcelExportService {
+  static Future<bool> exportRecords({
+    required String filename,
+    required String title,
+    required String scope,
+    required List<String> headers,
+    required List<double> widths,
+    required List<List<XlsxCell?>> records,
+  }) async {
+    if (records.isEmpty) return false;
+    final bytes = buildRecordsXlsx(
+      title: title,
+      scope: scope,
+      headers: headers,
+      widths: widths,
+      records: records,
+    );
+    if (!kIsWeb &&
+        const {
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+          TargetPlatform.macOS,
+          TargetPlatform.windows,
+        }.contains(defaultTargetPlatform)) {
+      final path = await FileSaver.instance.saveAs(
+        name: filename,
+        bytes: bytes,
+        fileExtension: 'xlsx',
+        mimeType: MimeType.microsoftExcel,
+      );
+      return path != null && path.isNotEmpty;
+    }
+    return _downloadXlsx(bytes, '$filename.xlsx');
+  }
+
+  static Uint8List buildRecordsXlsx({
+    required String title,
+    required String scope,
+    required List<String> headers,
+    required List<double> widths,
+    required List<List<XlsxCell?>> records,
+  }) {
+    final lastColumn = ReportXlsxWriter.column(headers.length - 1);
+    return ReportXlsxWriter.build(
+      sheetName: 'Dữ liệu',
+      widths: widths,
+      rows: {
+        1: [XlsxCell.text(title, style: 1)],
+        2: [XlsxCell.text(scope, style: 2)],
+        3: [
+          const XlsxCell.text('Ngày xuất'),
+          XlsxCell.timestamp(DateTime.now()),
+        ],
+        4: [XlsxCell.text('Số dòng: ${records.length}', style: 2)],
+        8: [for (final header in headers) XlsxCell.text(header, style: 3)],
+        for (var i = 0; i < records.length; i++) i + 9: records[i],
+      },
+      merges: ['A1:${lastColumn}1', 'A2:${lastColumn}2'],
+      dataCount: records.length,
+      heights: const {1: 30, 2: 26, 8: 30},
+    );
+  }
+
   static Future<bool> downloadProductImportTemplate() async {
     try {
       final data = await rootBundle.load(productImportTemplateAsset);

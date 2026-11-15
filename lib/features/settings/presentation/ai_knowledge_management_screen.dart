@@ -1,5 +1,8 @@
 import '../../../core/assets/app_icon.dart';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:archive/archive.dart';
+import 'package:xml/xml.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
@@ -11,39 +14,97 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/toast_service.dart';
+import '../../../core/utils/search_text.dart';
+import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
+import '../models/knowledge_html.dart';
 import '../providers/ai_knowledge_provider.dart';
 
-class AiKnowledgeManagementScreen extends ConsumerWidget {
+class AiKnowledgeManagementScreen extends ConsumerStatefulWidget {
   const AiKnowledgeManagementScreen({super.key});
 
+  @override
+  ConsumerState<AiKnowledgeManagementScreen> createState() =>
+      _AiKnowledgeManagementScreenState();
+}
+
+enum _DocumentStatus { all, active, inactive }
+
+class _AiKnowledgeManagementScreenState
+    extends ConsumerState<AiKnowledgeManagementScreen> {
+  static const _pageSize = 10;
+  final _search = TextEditingController();
+  final _scroll = ScrollController();
+  String? _categoryFilter;
+  _DocumentStatus _status = _DocumentStatus.all;
+  int _page = 1;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _clearFilters() => setState(() {
+    _search.clear();
+    _categoryFilter = null;
+    _status = _DocumentStatus.all;
+    _page = 1;
+  });
+
   void _showAddDocumentModal(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+    showDialog<void>(
       context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => _AddDocumentSheet(
-        onSave: (title, category, content) {
-          ref
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        constraints: const BoxConstraints(maxWidth: 660),
+        child: _AddDocumentSheet(
+          onSave: (title, category, content) => ref
               .read(aiKnowledgeProvider.notifier)
-              .addDocument(title: title, category: category, content: content);
-        },
+              .addDocument(title: title, category: category, content: content),
+        ),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final docsAsync = ref.watch(aiKnowledgeProvider);
     final docs = docsAsync.asData?.value ?? const <AiDocument>[];
+    final categories = docs.map((doc) => doc.category).toSet().toList()..sort();
+    final category = categories.contains(_categoryFilter)
+        ? _categoryFilter
+        : null;
+    final query = foldSearchText(_search.text);
+    final filtered = docs.where((doc) {
+      if (category != null && doc.category != category) return false;
+      if (_status != _DocumentStatus.all &&
+          doc.isActive != (_status == _DocumentStatus.active)) {
+        return false;
+      }
+      return query.isEmpty ||
+          foldSearchText(doc.title).contains(query) ||
+          foldSearchText(doc.content).contains(query);
+    }).toList();
+    final totalPages = (filtered.length / _pageSize).ceil().clamp(
+      1,
+      filtered.length + 1,
+    );
+    final currentPage = _page.clamp(1, totalPages);
+    final visibleDocs = filtered
+        .skip((currentPage - 1) * _pageSize)
+        .take(_pageSize)
+        .toList();
+    final hasFilters =
+        _search.text.isNotEmpty ||
+        category != null ||
+        _status != _DocumentStatus.all;
 
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final compactLayout =
@@ -176,6 +237,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(aiKnowledgeProvider),
         child: SingleChildScrollView(
+          controller: _scroll,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: Column(
@@ -248,6 +310,98 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 14),
 
+              if (docsAsync.hasValue) ...[
+                TextField(
+                  controller: _search,
+                  decoration: InputDecoration(
+                    labelText: 'Tìm theo tiêu đề hoặc nội dung',
+                    prefixIcon: const AppIcon(Icons.search),
+                    suffixIcon: _search.text.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Xóa từ khóa',
+                            onPressed: () => setState(() {
+                              _search.clear();
+                              _page = 1;
+                            }),
+                            icon: const AppIcon(Icons.close),
+                          ),
+                  ),
+                  onChanged: (_) => setState(() => _page = 1),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 230,
+                      child: DropdownButtonFormField<String>(
+                        key: ValueKey(('category', category)),
+                        initialValue: category,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Danh mục',
+                        ),
+                        items: [
+                          const DropdownMenuItem(
+                            value: null,
+                            child: Text('Tất cả danh mục'),
+                          ),
+                          for (final item in categories)
+                            DropdownMenuItem(
+                              value: item,
+                              child: Text(
+                                item,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                        ],
+                        onChanged: (value) => setState(() {
+                          _categoryFilter = value;
+                          _page = 1;
+                        }),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 210,
+                      child: DropdownButtonFormField<_DocumentStatus>(
+                        key: ValueKey(_status),
+                        initialValue: _status,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Trạng thái',
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: _DocumentStatus.all,
+                            child: Text('Tất cả trạng thái'),
+                          ),
+                          DropdownMenuItem(
+                            value: _DocumentStatus.active,
+                            child: Text('Đang sử dụng'),
+                          ),
+                          DropdownMenuItem(
+                            value: _DocumentStatus.inactive,
+                            child: Text('Đã tắt'),
+                          ),
+                        ],
+                        onChanged: (value) => setState(() {
+                          _status = value ?? _DocumentStatus.all;
+                          _page = 1;
+                        }),
+                      ),
+                    ),
+                    if (hasFilters)
+                      TextButton(
+                        onPressed: _clearFilters,
+                        child: const Text('Bỏ lọc'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
               if (docsAsync.isLoading)
                 const Padding(
                   padding: EdgeInsets.all(40),
@@ -258,12 +412,14 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                   message: 'Không thể tải kho tài liệu AI từ cơ sở dữ liệu.',
                   onRetry: () => ref.invalidate(aiKnowledgeProvider),
                 )
-              else if (docs.isEmpty)
+              else if (filtered.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(40),
                   child: Center(
                     child: Text(
-                      'Chưa có tài liệu nào trong kho. Bấm [Nạp Tài Liệu] để bắt đầu!',
+                      docs.isEmpty
+                          ? 'Chưa có nguồn tài liệu.'
+                          : 'Không tìm thấy tài liệu phù hợp.',
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         color: c.textMuted,
@@ -275,9 +431,9 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: docs.length,
+                  itemCount: visibleDocs.length,
                   itemBuilder: (context, index) {
-                    final doc = docs[index];
+                    final doc = visibleDocs[index];
                     return Container(
                       margin: const EdgeInsets.only(bottom: 14),
                       child: AppCardContainer(
@@ -416,7 +572,19 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                     );
                   },
                 ),
-              const SizedBox(height: 88), // UI Breathing Room Padding
+              if (filtered.isNotEmpty)
+                AppPaginationBar(
+                  currentPage: currentPage,
+                  totalPages: totalPages,
+                  totalItems: filtered.length,
+                  itemLabel: 'tài liệu',
+                  compactNavigation: true,
+                  onPageChanged: (page) {
+                    setState(() => _page = page);
+                    if (_scroll.hasClients) _scroll.jumpTo(0);
+                  },
+                ),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -426,7 +594,8 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
 }
 
 class _AddDocumentSheet extends ConsumerStatefulWidget {
-  final void Function(String title, String category, String content) onSave;
+  final Future<void> Function(String title, String category, String content)
+  onSave;
 
   const _AddDocumentSheet({required this.onSave});
 
@@ -441,6 +610,13 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
   String _category = 'Thuế HKD';
   bool _showUrlInput = false;
   bool _isLoading = false;
+  bool _isSaving = false;
+  String? _importError;
+  String? _importStatus;
+  String? _saveError;
+  final _formKey = GlobalKey<FormState>();
+
+  bool get _busy => _isLoading || _isSaving;
 
   @override
   void initState() {
@@ -524,524 +700,440 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
     },
   ];
 
-  Future<void> _pickDocumentFile() async {
+  Future<void> _pickDocumentFile({bool htmlOnly = false}) async {
+    setState(() {
+      _isLoading = true;
+      _importError = null;
+      _importStatus = null;
+    });
     try {
-      setState(() => _isLoading = true);
-      final picked = await FilePicker.pickFile(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
-        allowedExtensions: const ['txt', 'md', 'pdf', 'docx', 'doc', 'json'],
+        allowedExtensions: htmlOnly
+            ? const ['html', 'htm']
+            : const ['docx', 'txt', 'md', 'json', 'html', 'htm'],
       );
-      if (picked == null) {
-        setState(() => _isLoading = false);
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      final fileTitle = file.name.replaceFirst(RegExp(r'\.[^.]+$'), '');
+      final (title, text) = switch (file.extension?.toLowerCase()) {
+        'docx' => (fileTitle, _readWordText(bytes)),
+        'html' || 'htm' => readKnowledgeHtml(bytes, fileTitle),
+        _ => (fileTitle, utf8.decode(bytes)),
+      };
+      final content = text.trim();
+      if (!mounted) return;
+      if (content.isEmpty) {
+        setState(() => _importError = 'Tệp không có nội dung.');
         return;
       }
-      final fileName = picked.name;
-      final bytes = await picked.readAsBytes();
-
-      if (bytes.isEmpty) {
-        ToastService.showWarning('Không đọc được dữ liệu từ tệp.');
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      final ext = picked.extension?.toLowerCase() ?? '';
-      String extractedContent = '';
-
-      if (ext == 'txt' || ext == 'md' || ext == 'json') {
-        extractedContent = utf8.decode(bytes, allowMalformed: true);
-      } else {
-        // Đối với PDF hoặc DOCX: Giải mã chuỗi UTF-8 tiếng Việt an toàn
-        final utf8Decoded = utf8.decode(bytes, allowMalformed: true);
-        final matches =
-            RegExp(
-                  r'[\p{L}\p{N}\s,.\-:;/()""'
-                  '–—]{6,}',
-                  unicode: true,
-                )
-                .allMatches(utf8Decoded)
-                .map((m) => m.group(0)!.trim())
-                .where(
-                  (s) =>
-                      s.length > 8 &&
-                      !s.contains('Font') &&
-                      !s.contains('obj') &&
-                      !s.contains('endobj') &&
-                      !s.contains('XML') &&
-                      !s.contains('xmlns'),
-                )
-                .take(150)
-                .toList();
-
-        if (matches.isNotEmpty) {
-          extractedContent = matches.join('\n');
-        } else {
-          extractedContent =
-              'Tài liệu $fileName (${(bytes.length / 1024).toStringAsFixed(1)} KB).\nĐã lập chỉ mục nội dung cho Trợ lý AI.';
-        }
-      }
-
+      _applyContent(
+        title,
+        content,
+        'Đã đọc ${file.name}. Kiểm tra nội dung trước khi lưu.',
+      );
+    } catch (_) {
       if (mounted) {
-        setState(() {
-          if (_titleCtrl.text.trim().isEmpty) {
-            _titleCtrl.text = fileName.replaceAll(RegExp(r'\.[^.]+$'), '');
-          }
-          _contentCtrl.text = extractedContent;
-          _isLoading = false;
-        });
-        ToastService.showSuccess('Đã nạp nội dung từ tệp $fileName.');
+        setState(
+          () => _importError =
+              'Không đọc được tệp. Hãy kiểm tra định dạng và thử lại.',
+        );
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ToastService.showError('Lỗi đọc tệp: $e');
-      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _applyPreset(Map<String, String> preset) {
+  String _readWordText(Uint8List bytes) {
+    const limit = 8 * 1024 * 1024;
+    if (bytes.length > limit) throw const FormatException('Tệp quá lớn.');
+    final directory = ZipDirectory()..read(InputMemoryStream(bytes));
+    var expandedSize = 0;
+    for (final entry in directory.fileHeaders) {
+      expandedSize += entry.uncompressedSize;
+      if (expandedSize > limit || entry.generalPurposeBitFlag & 1 != 0) {
+        throw const FormatException('Không đọc được nội dung tệp.');
+      }
+    }
+    final document = ZipDecoder()
+        .decodeBytes(bytes)
+        .findFile('word/document.xml');
+    if (document == null) throw const FormatException('Tệp DOCX không hợp lệ.');
+    const wordNamespace =
+        'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    return XmlDocument.parse(utf8.decode(document.content))
+        .findAllElements('p', namespace: wordNamespace)
+        .map(
+          (paragraph) => paragraph
+              .findAllElements('t', namespace: wordNamespace)
+              .map((text) => text.innerText)
+              .join(),
+        )
+        .where((paragraph) => paragraph.trim().isNotEmpty)
+        .join('\n');
+  }
+
+  void _applyContent(String title, String content, String status) {
     setState(() {
-      _titleCtrl.text = preset['title'] ?? '';
-      _category = preset['category'] ?? 'Thuế HKD';
-      _contentCtrl.text = preset['content'] ?? '';
+      if (_titleCtrl.text.trim().isEmpty) _titleCtrl.text = title;
+      _contentCtrl.text = content;
+      _importStatus = status;
+      _saveError = null;
     });
-    ToastService.showSuccess('Đã áp dụng mẫu quy định: ${preset['title']}');
   }
 
   Future<void> _extractFromUrl() async {
     final url = _urlCtrl.text.trim();
-    if (url.isEmpty || !url.startsWith('http')) {
-      ToastService.showWarning(
-        'Vui lòng nhập đường link hợp lệ (bắt đầu bằng http:// hoặc https://)',
-      );
+    final uri = Uri.tryParse(url);
+    if (uri == null ||
+        !const {'http', 'https'}.contains(uri.scheme) ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty) {
+      setState(() {
+        _importStatus = null;
+        _importError = 'Nhập địa chỉ trang bắt đầu bằng https:// hoặc http://.';
+      });
       return;
     }
+    setState(() {
+      _isLoading = true;
+      _importError = null;
+      _importStatus = null;
+    });
     try {
-      setState(() => _isLoading = true);
-      final api = ref.read(apiClientProvider);
-      final response = await api.post(
-        '/ai/knowledge/extract-url',
-        data: {'url': url},
-      );
-      Map<String, dynamic> data = {};
-      if (response is Map<String, dynamic>) {
-        data = response['data'] is Map<String, dynamic>
-            ? response['data']
-            : response;
+      final response = await ref
+          .read(apiClientProvider)
+          .post('/ai/knowledge/extract-url', data: {'url': url});
+      if (!mounted) return;
+      final data = response is Map ? response['data'] ?? response : null;
+      final content = data is Map
+          ? (data['content']?.toString() ?? '').trim()
+          : '';
+      if (content.isEmpty) {
+        setState(
+          () => _importError =
+              'Trang không có văn bản để nhập. Hãy thử nguồn khác hoặc dán nội dung vào biểu mẫu.',
+        );
+        return;
       }
-      final title = data['title']?.toString() ?? '';
-      final content = data['content']?.toString() ?? '';
+      _applyContent(
+        data['title']?.toString() ?? '',
+        content,
+        'Đã đọc nội dung từ liên kết. Kiểm tra lại trước khi lưu.',
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      final blocked = error.message.contains('HTTP 403');
+      setState(
+        () => _importError = blocked
+            ? 'Trang nguồn từ chối yêu cầu tải (HTTP 403). Mở trang trong trình duyệt, lưu dưới dạng HTML rồi chọn tệp bên dưới. Bạn cũng có thể dán văn bản.'
+            : error.statusCode == 403
+            ? 'Tài khoản cần quyền chỉnh sửa cài đặt để trích xuất từ đường dẫn.'
+            : 'Không đọc được nội dung từ liên kết. Kiểm tra địa chỉ, thử lại hoặc dán nội dung vào biểu mẫu.',
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() => _importError = 'Không thể tải liên kết. Hãy thử lại.');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
+  Future<void> _save() async {
+    if (_busy || !_formKey.currentState!.validate()) return;
+    setState(() {
+      _isSaving = true;
+      _saveError = null;
+    });
+    try {
+      await widget.onSave(
+        _titleCtrl.text.trim(),
+        _category,
+        _contentCtrl.text.trim(),
+      );
+    } catch (_) {
       if (mounted) {
         setState(() {
-          if (title.isNotEmpty && _titleCtrl.text.trim().isEmpty) {
-            _titleCtrl.text = title;
-          }
-          if (content.isNotEmpty) {
-            _contentCtrl.text = content;
-          }
-          _isLoading = false;
-          _showUrlInput = false;
+          _isSaving = false;
+          _saveError =
+              'Chưa lưu được nguồn. Nội dung đã nhập vẫn còn trong biểu mẫu.';
         });
-        ToastService.showSuccess('Đã trích xuất nội dung từ liên kết web!');
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ToastService.showError('Lỗi khi trích xuất: $e');
-      }
+      return;
     }
+    if (!mounted) return;
+    Navigator.pop(context);
+    ToastService.showSuccess('Đã thêm nguồn tài liệu.');
   }
 
   @override
   Widget build(BuildContext context) {
-    final c = AppThemeColors.of(context);
-
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return PopScope(
+      canPop: !_isSaving,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 8, 8),
+            child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: AppColors.primary,
-                  radius: 16,
-                  child: const AppIcon(
-                    Icons.note_add_rounded,
-                    size: 18,
-                    color: Colors.white,
-                  ),
+                AppIcon(
+                  Icons.note_add_outlined,
+                  color: colors.primary,
+                  size: 22,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Thêm nguồn tham khảo',
-                    style: GoogleFonts.manrope(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: theme.textTheme.titleLarge,
                   ),
                 ),
                 IconButton(
+                  tooltip: 'Đóng',
+                  onPressed: _isSaving ? null : () => Navigator.pop(context),
                   icon: const AppIcon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-
-            // Các nút tiện ích nhập nhanh từ Tệp hoặc Liên kết URL
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Cách nạp dữ liệu nhanh:',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _isLoading ? null : _pickDocumentFile,
-                        icon: const AppIcon(
-                          Icons.upload_file_rounded,
-                          size: 16,
-                        ),
-                        label: const Text('Tải tệp (PDF, Word, TXT, JSON)'),
-                        style: OutlinedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                        ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _isLoading
-                            ? null
-                            : () => setState(
-                                () => _showUrlInput = !_showUrlInput,
-                              ),
-                        icon: const AppIcon(Icons.link_rounded, size: 16),
-                        label: Text(
-                          _showUrlInput
-                              ? 'Ẩn ô dán link'
-                              : 'Dán đường link (URL)',
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_showUrlInput) ...[
-                    const SizedBox(height: 10),
-                    Row(
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _urlCtrl,
-                            enabled: !_isLoading,
-                            decoration: const InputDecoration(
-                              isDense: true,
-                              hintText:
-                                  'https://thuvienphapluat.vn/... hoặc link bài viết',
-                              prefixIcon: AppIcon(
-                                Icons.language_rounded,
-                                size: 18,
-                              ),
-                            ),
+                        OutlinedButton.icon(
+                          onPressed: _busy ? null : _pickDocumentFile,
+                          icon: const AppIcon(
+                            Icons.upload_file_rounded,
+                            size: 18,
                           ),
+                          label: const Text('Tải tệp văn bản'),
                         ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: _isLoading ? null : _extractFromUrl,
-                          style: FilledButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                        OutlinedButton.icon(
+                          onPressed: _busy
+                              ? null
+                              : () => setState(
+                                  () => _showUrlInput = !_showUrlInput,
+                                ),
+                          icon: const AppIcon(Icons.link_rounded, size: 18),
+                          label: Text(
+                            _showUrlInput
+                                ? 'Ẩn đường dẫn'
+                                : 'Nhập từ đường dẫn',
                           ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text('Trích xuất'),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    // Gợi ý link chính thống
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          Text(
-                            'Gợi ý link:',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: c.textMuted,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          ActionChip(
-                            padding: EdgeInsets.zero,
-                            visualDensity: VisualDensity.compact,
-                            label: const Text(
-                              'thuedientu.gdt.gov.vn',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                            onPressed: () {
-                              _urlCtrl.text = 'https://thuedientu.gdt.gov.vn';
-                            },
-                          ),
-                          const SizedBox(width: 6),
-                          ActionChip(
-                            padding: EdgeInsets.zero,
-                            visualDensity: VisualDensity.compact,
-                            label: const Text(
-                              'vbpl.vn',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                            onPressed: () {
-                              _urlCtrl.text = 'https://vbpl.vn';
-                            },
-                          ),
-                          const SizedBox(width: 6),
-                          ActionChip(
-                            padding: EdgeInsets.zero,
-                            visualDensity: VisualDensity.compact,
-                            label: const Text(
-                              'thuvienphapluat.vn',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                            onPressed: () {
-                              _urlCtrl.text = 'https://thuvienphapluat.vn';
-                            },
-                          ),
-                        ],
+                    const SizedBox(height: 6),
+                    Text(
+                      'Hỗ trợ DOCX, TXT, Markdown, JSON và HTML. Với PDF hoặc DOC, hãy dán phần văn bản cần lưu.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    if (_showUrlInput) ...[
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: _urlCtrl,
+                        enabled: !_busy,
+                        keyboardType: TextInputType.url,
+                        onChanged: (_) {
+                          if (_importError != null || _importStatus != null) {
+                            setState(() {
+                              _importError = null;
+                              _importStatus = null;
+                            });
+                          }
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Đường dẫn tài liệu',
+                          hintText: 'https://...',
+                          prefixIcon: AppIcon(Icons.link_rounded, size: 18),
+                        ),
                       ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: OutlinedButton(
+                          onPressed: _busy ? null : _extractFromUrl,
+                          child: const Text('Trích xuất'),
+                        ),
+                      ),
+                    ],
+                    if (_isLoading) const LinearProgressIndicator(),
+                    if (_importError case final error?)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            error,
+                            style: TextStyle(color: colors.error),
+                          ),
+                        ),
+                      ),
+                    if (_showUrlInput && _importError != null)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: _busy
+                              ? null
+                              : () => _pickDocumentFile(htmlOnly: true),
+                          icon: const AppIcon(
+                            Icons.upload_file_rounded,
+                            size: 18,
+                          ),
+                          label: const Text('Chọn tệp HTML đã lưu'),
+                        ),
+                      ),
+                    if (_importStatus case final status?)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(status, style: theme.textTheme.bodySmall),
+                      ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _titleCtrl,
+                      enabled: !_busy,
+                      decoration: const InputDecoration(
+                        labelText: 'Tiêu đề tài liệu',
+                      ),
+                      validator: (value) => (value ?? '').trim().isEmpty
+                          ? 'Nhập tiêu đề tài liệu.'
+                          : null,
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      key: ValueKey(_category),
+                      initialValue: _category,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Danh mục tài liệu',
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Thuế HKD',
+                          child: Text('Thuế hộ kinh doanh'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Bán Hàng & Sổ Nợ',
+                          child: Text('Bán hàng và sổ nợ'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Kho & Tài Chính',
+                          child: Text('Kho và quản lý tiền mặt'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Cửa Hàng',
+                          child: Text('Quy định cửa hàng'),
+                        ),
+                      ],
+                      onChanged: _busy
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                setState(() => _category = value);
+                              }
+                            },
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _contentCtrl,
+                      enabled: !_busy,
+                      minLines: 4,
+                      maxLines: 7,
+                      decoration: const InputDecoration(
+                        labelText: 'Nội dung tài liệu',
+                        alignLabelWithHint: true,
+                      ),
+                      validator: (value) => (value ?? '').trim().isEmpty
+                          ? 'Nhập nội dung tài liệu.'
+                          : null,
+                    ),
+                    const SizedBox(height: 8),
+                    ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      title: const Text('Mẫu nội dung tham khảo'),
+                      subtitle: const Text(
+                        'Đối chiếu nội dung với tài liệu gốc trước khi lưu.',
+                      ),
+                      children: [
+                        for (final preset in _legalPresets)
+                          ListTile(
+                            title: Text(preset['title']!),
+                            subtitle: Text(preset['desc']!),
+                            contentPadding: EdgeInsets.zero,
+                            trailing: TextButton(
+                              onPressed: _busy
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        _titleCtrl.text = preset['title']!;
+                                        _category = preset['category']!;
+                                        _contentCtrl.text = preset['content']!;
+                                        _importError = null;
+                                        _importStatus = null;
+                                        _saveError = null;
+                                      });
+                                    },
+                              child: const Text('Áp dụng'),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
-                ],
+                ),
               ),
             ),
-            const SizedBox(height: 12),
-
-            // Khối Mẫu quy định pháp lý chuẩn 1-chạm (Presets)
-            ExpansionTile(
-              tilePadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 0,
-              ),
-              childrenPadding: const EdgeInsets.only(bottom: 8),
-              collapsedShape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: c.divider),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                ),
-              ),
-              leading: AppIcon(
-                Icons.bookmark_added_rounded,
-                size: 20,
-                color: AppColors.primary,
-              ),
-              title: Text(
-                'Mẫu quy định & chính sách chuẩn (1-Chạm)',
-                style: GoogleFonts.manrope(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: c.textPrimary,
-                ),
-              ),
-              subtitle: Text(
-                'Nạp ngay Thông tư 40, HĐĐT 123, Luật QLT 38, Quy chế kho FIFO...',
-                style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary),
-              ),
-              children: _legalPresets.map((preset) {
-                return ListTile(
-                  dense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 2,
-                  ),
-                  leading: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: AppIcon(
-                      Icons.auto_stories_rounded,
-                      size: 16,
-                      color: AppColors.primary,
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_saveError case final error?)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(error, style: TextStyle(color: colors.error)),
                     ),
                   ),
-                  title: Text(
-                    preset['title'] ?? '',
-                    style: GoogleFonts.manrope(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: c.textPrimary,
-                    ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    spacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: _isSaving
+                            ? null
+                            : () => Navigator.pop(context),
+                        child: const Text('Hủy'),
+                      ),
+                      FilledButton(
+                        onPressed: _busy ? null : _save,
+                        child: Text(_isSaving ? 'Đang lưu…' : 'Lưu nguồn'),
+                      ),
+                    ],
                   ),
-                  subtitle: Text(
-                    preset['desc'] ?? '',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: c.textSecondary,
-                    ),
-                  ),
-                  trailing: TextButton.icon(
-                    onPressed: () => _applyPreset(preset),
-                    icon: const AppIcon(Icons.flash_on_rounded, size: 14),
-                    label: const Text(
-                      'Áp dụng',
-                      style: TextStyle(fontSize: 11.5),
-                    ),
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      foregroundColor: AppColors.primary,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 14),
-            const SizedBox(height: 16),
-
-            TextField(
-              controller: _titleCtrl,
-              enabled: !_isLoading,
-              decoration: const InputDecoration(
-                labelText: 'Tiêu đề tài liệu hoặc quy định',
-                hintText: 'VD: Thông tư 40/2021/TT-BTC, Quy định chiết khấu...',
-              ),
-            ),
-            const SizedBox(height: 14),
-            DropdownButtonFormField<String>(
-              initialValue: _category,
-              decoration: const InputDecoration(labelText: 'Danh mục tài liệu'),
-              items: const [
-                DropdownMenuItem(
-                  value: 'Thuế HKD',
-                  child: Text('Thuế hộ kinh doanh'),
-                ),
-                DropdownMenuItem(
-                  value: 'Bán Hàng & Sổ Nợ',
-                  child: Text('Bán hàng và sổ nợ'),
-                ),
-                DropdownMenuItem(
-                  value: 'Kho & Tài Chính',
-                  child: Text('Kho và quản lý tiền mặt'),
-                ),
-                DropdownMenuItem(
-                  value: 'Cửa Hàng',
-                  child: Text('Quy định cửa hàng'),
                 ),
               ],
-              onChanged: (v) {
-                if (v != null) setState(() => _category = v);
-              },
             ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _contentCtrl,
-              enabled: !_isLoading,
-              maxLines: 6,
-              decoration: const InputDecoration(
-                labelText: 'Nội dung tài liệu',
-                hintText: 'Nội dung trích xuất từ tệp/link hoặc nhập tay...',
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _isLoading
-                  ? null
-                  : () {
-                      if (_titleCtrl.text.trim().isEmpty ||
-                          _contentCtrl.text.trim().isEmpty) {
-                        ToastService.showWarning(
-                          'Vui lòng nhập đầy đủ tiêu đề và nội dung tài liệu.',
-                        );
-                        return;
-                      }
-                      widget.onSave(
-                        _titleCtrl.text.trim(),
-                        _category,
-                        _contentCtrl.text.trim(),
-                      );
-                      Navigator.pop(context);
-                      ToastService.showSuccess('Đã thêm nguồn tài liệu.');
-                    },
-              icon: _isLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const AppIcon(
-                      Icons.check_circle_rounded,
-                      color: Colors.white,
-                    ),
-              label: Text(
-                _isLoading ? 'Đang xử lý...' : 'Lưu nguồn',
-                style: GoogleFonts.manrope(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: Colors.white,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

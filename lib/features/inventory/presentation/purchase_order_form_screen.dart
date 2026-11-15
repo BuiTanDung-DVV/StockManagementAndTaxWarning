@@ -583,6 +583,16 @@ class _PurchaseOrderFormScreenState
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             if (widget.sourceInvoice != null) _sourceInfo(),
+                            if (_currentStep == 0 &&
+                                widget.suggestion != null &&
+                                _items.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Text(
+                                  'Đã có ${_items.length} dòng hàng trong nháp. Kiểm tra tại bước Sản phẩm.',
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                              ),
                             _buildCurrentStepView(
                               c,
                               theme,
@@ -1484,68 +1494,74 @@ class _PurchaseOrderFormScreenState
         ),
       ),
       child: SafeArea(
-        child: Row(
-          children: [
-            if (_currentStep > 0) ...[
-              Expanded(
-                flex: 2,
-                child: OutlinedButton(
-                  onPressed: _prevStep,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 380),
+            child: Row(
+              children: [
+                if (_currentStep > 0) ...[
+                  Expanded(
+                    flex: 2,
+                    child: OutlinedButton(
+                      onPressed: _prevStep,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Text(
+                        'Quay lại',
+                        style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
-                  child: Text(
-                    'Quay lại',
-                    style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-            ],
-            Expanded(
-              flex: 3,
-              child: ElevatedButton.icon(
-                onPressed: _saving
-                    ? null
-                    : (_currentStep == 2 ? _save : _nextStep),
-                icon: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Colors.white,
-                        ),
-                      )
-                    : AppIcon(
-                        _currentStep == 2
-                            ? Icons.check_circle_outline_rounded
-                            : Icons.arrow_forward_rounded,
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  flex: 3,
+                  child: ElevatedButton.icon(
+                    onPressed: _saving
+                        ? null
+                        : (_currentStep == 2 ? _save : _nextStep),
+                    icon: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        : AppIcon(
+                            _currentStep == 2
+                                ? Icons.check_circle_outline_rounded
+                                : Icons.arrow_forward_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                    label: Text(
+                      _saving
+                          ? 'Đang tạo...'
+                          : (_currentStep == 2 ? 'Lưu Đơn Nhập' : 'Tiếp tục'),
+                      style: GoogleFonts.manrope(
+                        fontWeight: FontWeight.bold,
                         color: Colors.white,
-                        size: 18,
                       ),
-                label: Text(
-                  _saving
-                      ? 'Đang tạo...'
-                      : (_currentStep == 2 ? 'Lưu Đơn Nhập' : 'Tiếp tục'),
-                  style: GoogleFonts.manrope(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
                   ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

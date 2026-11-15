@@ -2140,30 +2140,21 @@ class _DashboardMetricStrip extends StatelessWidget {
         final isTablet = constraints.maxWidth >= 600 && !isDesktop;
 
         if (isDesktop) {
-          return Container(
-            key: const Key('dashboard-metric-band'),
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: colors.card,
-              border: Border.all(color: colors.divider),
-              borderRadius: BorderRadius.circular(AppRadius.card),
-            ),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var i = 0; i < metrics.length; i++) ...[
-                    if (i > 0) VerticalDivider(width: 1, color: colors.divider),
-                    Expanded(
-                      child: _PastelMetricCard(
-                        metric: metrics[i],
-                        surface: _getMetricSurface(metrics[i].label, colors),
-                        grouped: true,
-                      ),
+          return IntrinsicHeight(
+            child: Row(
+              key: const Key('dashboard-metric-band'),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < metrics.length; i++) ...[
+                  if (i > 0) const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: _PastelMetricCard(
+                      metric: metrics[i],
+                      surface: _getMetricSurface(metrics[i].label, colors),
                     ),
-                  ],
+                  ),
                 ],
-              ),
+              ],
             ),
           );
         }

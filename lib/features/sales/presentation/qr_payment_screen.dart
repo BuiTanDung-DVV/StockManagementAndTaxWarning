@@ -1,9 +1,10 @@
+import 'dart:async';
+
 import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
@@ -15,13 +16,13 @@ import '../../products/providers/product_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../providers/sales_provider.dart';
+import '../services/sales_payment_sound.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
   symbol: '₫',
   decimalDigits: 0,
 );
-final _tts = FlutterTts();
 
 class QrPaymentScreen extends ConsumerStatefulWidget {
   final int orderId;
@@ -70,6 +71,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
               'notes': 'Xác nhận thanh toán qua mã QR',
             },
           );
+      if (!mounted) return;
       setState(() => _paid = true);
 
       // Trigger UI updates across the app
@@ -80,11 +82,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
       ref.invalidate(taxObligationsProvider);
       ref.invalidate(cashAccountsProvider);
 
-      // TTS announcement
-      final amountText = _formatAmountForSpeech(widget.totalAmount);
-      await _tts.setLanguage('vi-VN');
-      await _tts.setSpeechRate(0.45);
-      await _tts.speak('Đã nhận $amountText cho đơn hàng ${widget.orderCode}');
+      unawaited(SalesPaymentSound.transferReceived.play());
 
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) Navigator.of(context).pop(true);
@@ -120,17 +118,6 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
         ToastService.showError('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
       }
     }
-  }
-
-  String _formatAmountForSpeech(double amount) {
-    if (amount >= 1000000) {
-      final m = amount / 1000000;
-      return '${m.toStringAsFixed(m.truncateToDouble() == m ? 0 : 1)} triệu đồng';
-    } else if (amount >= 1000) {
-      final k = amount / 1000;
-      return '${k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1)} nghìn đồng';
-    }
-    return '${amount.toInt()} đồng';
   }
 
   void _copyToClipboard(String label, String text) {

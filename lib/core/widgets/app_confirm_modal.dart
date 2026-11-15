@@ -10,6 +10,7 @@ class AppConfirmModal extends StatelessWidget {
   final String cancelText;
   final VoidCallback onConfirm;
   final bool isDestructive;
+  final double? maxWidth;
 
   const AppConfirmModal({
     super.key,
@@ -19,6 +20,7 @@ class AppConfirmModal extends StatelessWidget {
     this.confirmText = 'Xác nhận',
     this.cancelText = 'Hủy',
     this.isDestructive = false,
+    this.maxWidth,
   });
 
   static Future<bool?> show(
@@ -28,6 +30,7 @@ class AppConfirmModal extends StatelessWidget {
     String confirmText = 'Xác nhận',
     String cancelText = 'Hủy',
     bool isDestructive = false,
+    double? maxWidth,
   }) async {
     final result = await showDialog<bool>(
       context: context,
@@ -37,6 +40,7 @@ class AppConfirmModal extends StatelessWidget {
         confirmText: confirmText,
         cancelText: cancelText,
         isDestructive: isDestructive,
+        maxWidth: maxWidth,
         onConfirm: () => Navigator.of(ctx).pop(true),
       ),
     );
@@ -51,6 +55,9 @@ class AppConfirmModal extends StatelessWidget {
     final c = AppThemeColors.of(context);
 
     return AlertDialog(
+      constraints: maxWidth == null
+          ? null
+          : BoxConstraints(maxWidth: maxWidth!),
       backgroundColor: c.card,
       elevation: 24,
       shadowColor: Colors.black.withValues(alpha: 0.15),

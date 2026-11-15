@@ -155,8 +155,14 @@ class TaxObligationReminder extends ConsumerWidget {
         active.sort((a, b) => getPriority(a).compareTo(getPriority(b)));
         final displayList = active.take(5).toList();
 
-        return Padding(
-          padding: const EdgeInsets.only(top: 0),
+        final radius = BorderRadius.circular(AppRadius.card);
+        return Material(
+          color: c.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: radius,
+            side: BorderSide(color: c.divider),
+          ),
+          clipBehavior: Clip.antiAlias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -223,178 +229,102 @@ class TaxObligationReminder extends ConsumerWidget {
                   urgencyIcon = Icons.info_outline_rounded;
                 }
 
-                return GestureDetector(
-                  onTap: () => context.push('/tax-obligations'),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: c.card,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: c.divider, width: 1),
+                final badge = Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: urgencyColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    urgencyLabel,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: c.textPrimary,
                     ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isNarrow = constraints.maxWidth < 460;
-                        if (isNarrow) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Wrap(
-                                alignment: WrapAlignment.spaceBetween,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                spacing: 8,
-                                runSpacing: 6,
-                                children: [
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: urgencyColor.withValues(
-                                            alpha: 0.15,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        child: AppIcon(
-                                          urgencyIcon,
-                                          size: 20,
-                                          color: urgencyColor,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        'Thuế $period',
-                                        style: GoogleFonts.manrope(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: c.textPrimary,
-                                        ),
-                                      ),
-                                    ],
+                  ),
+                );
+                return Column(
+                  children: [
+                    if (t != displayList.first)
+                      Divider(height: 1, color: c.divider),
+                    InkWell(
+                      onTap: () => context.push('/tax-obligations'),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final compact =
+                                constraints.maxWidth < 620 ||
+                                MediaQuery.textScalerOf(context).scale(1) > 1.2;
+                            return Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(9),
+                                  decoration: BoxDecoration(
+                                    color: urgencyColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: urgencyColor.withValues(
-                                        alpha: 0.15,
-                                      ),
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                    child: Text(
-                                      urgencyLabel,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: urgencyColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Còn phải nộp: ${_currFmt.format(totalOwed)}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: c.textSecondary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Hạn: ${dueDateStr ?? 'Chưa xác định'}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: c.textMuted,
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-
-                        // Wide layout
-                        return Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: urgencyColor.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: AppIcon(
-                                urgencyIcon,
-                                size: 22,
-                                color: urgencyColor,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Thuế $period',
-                                    style: GoogleFonts.manrope(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: c.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    'Còn phải nộp: ${_currFmt.format(totalOwed)}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: c.textSecondary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Hạn: ${dueDateStr ?? 'Chưa xác định'}',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: c.textMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: urgencyColor.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                child: Text(
-                                  urgencyLabel,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
+                                  child: AppIcon(
+                                    urgencyIcon,
+                                    size: 20,
                                     color: urgencyColor,
                                   ),
                                 ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Thuế $period',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleSmall,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Còn phải nộp: ${_currFmt.format(totalOwed)}',
+                                      ),
+                                      Text(
+                                        'Hạn: ${dueDateStr ?? 'Chưa xác định'}',
+                                        style: TextStyle(
+                                          color: c.textSecondary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      if (compact) ...[
+                                        const SizedBox(height: 6),
+                                        badge,
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                if (!compact) ...[
+                                  const SizedBox(width: 12),
+                                  badge,
+                                ],
+                                const SizedBox(width: 8),
+                                AppIcon(
+                                  Icons.chevron_right,
+                                  size: 18,
+                                  color: c.textSecondary,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
                     ),
-                  ),
-                ); // closes GestureDetector
+                  ],
+                );
               }),
               if (active.length > 5)
                 Padding(

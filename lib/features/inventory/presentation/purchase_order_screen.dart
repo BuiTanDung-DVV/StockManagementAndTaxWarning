@@ -1,3 +1,5 @@
+import '../../../core/utils/report_xlsx_writer.dart';
+import 'widgets/inventory_excel_button.dart';
 import 'dart:async';
 import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
@@ -328,13 +330,74 @@ class _PurchaseOrderScreenState extends ConsumerState<PurchaseOrderScreen> {
                               physics: const AlwaysScrollableScrollPhysics(
                                 parent: BouncingScrollPhysics(),
                               ),
-                              itemCount: items.length + 1,
+                              itemCount: items.length + 2,
                               separatorBuilder: (_, _) => Divider(
                                 height: 1,
                                 color: c.divider.withValues(alpha: 0.5),
                               ),
                               itemBuilder: (_, i) {
-                                if (i == items.length) {
+                                if (i == 0) {
+                                  return Align(
+                                    alignment: Alignment.centerRight,
+                                    child: InventoryExcelButton(
+                                      filename: 'Don_nhap_trang_$currentPage',
+                                      title: 'DANH SÁCH ĐƠN NHẬP HÀNG',
+                                      scope:
+                                          'Trang $currentPage/$totalPages · Theo bộ lọc đang áp dụng',
+                                      headers: const [
+                                        'Mã đơn',
+                                        'Ngày nhập',
+                                        'Nhà cung cấp',
+                                        'Số hóa đơn',
+                                        'Trạng thái',
+                                        'Tổng tiền (đ)',
+                                      ],
+                                      widths: const [22, 16, 38, 22, 20, 20],
+                                      records: [
+                                        for (final po in items.whereType<Map>())
+                                          [
+                                            XlsxCell.text(
+                                              (po['orderCode'] ??
+                                                      po['code'] ??
+                                                      po['id'])
+                                                  .toString(),
+                                            ),
+                                            XlsxCell.text(
+                                              po['orderDate']
+                                                      ?.toString()
+                                                      .split('T')
+                                                      .first ??
+                                                  '',
+                                            ),
+                                            XlsxCell.text(
+                                              (po['supplier']?['name'] ??
+                                                      po['supplierName'] ??
+                                                      '')
+                                                  .toString(),
+                                            ),
+                                            XlsxCell.text(
+                                              po['invoiceNumber']?.toString() ??
+                                                  '',
+                                            ),
+                                            XlsxCell.text(
+                                              switch (po['status']) {
+                                                'COMPLETED' => 'Hoàn thành',
+                                                'PENDING' => 'Chờ xử lý',
+                                                'CANCELLED' => 'Đã hủy',
+                                                'DRAFT' => 'Nháp',
+                                                final status =>
+                                                  status?.toString() ?? '',
+                                              },
+                                            ),
+                                            InventoryExcelButton.number(
+                                              po['totalAmount'],
+                                            ),
+                                          ],
+                                      ],
+                                    ),
+                                  );
+                                }
+                                if (i == items.length + 1) {
                                   return AppPaginationBar(
                                     currentPage: currentPage,
                                     totalPages: totalPages,
@@ -344,7 +407,7 @@ class _PurchaseOrderScreenState extends ConsumerState<PurchaseOrderScreen> {
                                         setState(() => _page = page),
                                   );
                                 }
-                                final po = items[i] as Map;
+                                final po = items[i - 1] as Map;
                                 final code =
                                     po['orderCode'] ??
                                     po['code'] ??

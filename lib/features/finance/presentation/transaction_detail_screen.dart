@@ -142,6 +142,23 @@ class _TransactionDetailView extends ConsumerWidget {
     final transactionDate = financeTransactionDateValue(transaction) ?? '';
     final counterparty = transaction['counterparty'] ?? '';
     final isLinked = financeTransactionIsLinked(transaction);
+    final sourceId = asInt(transaction['referenceId']);
+    final shop = ref.watch(shopProvider);
+    final sourceType = transaction['referenceType']?.toString();
+    final (sourceLabel, sourceRoute) = switch (sourceType) {
+      'SALES_ORDER' => (
+        'Đơn bán hàng',
+        shop.hasPermission('sales') ? '/sales/$sourceId' : null,
+      ),
+      'PURCHASE_ORDER' => (
+        'Đơn nhập hàng',
+        shop.hasPermission('inventory')
+            ? '/purchase-orders/detail?id=$sourceId'
+            : null,
+      ),
+      'PURCHASE_WITHOUT_INVOICE' => ('Bảng kê mua hàng không hóa đơn', null),
+      _ => ('Chứng từ nghiệp vụ', null),
+    };
     final repeatSource = ManualCashRepeat.from(transaction);
     final canRepeat =
         repeatSource != null &&
@@ -245,7 +262,9 @@ class _TransactionDetailView extends ConsumerWidget {
                   OutlinedButton.icon(
                     icon: const AppIcon(Icons.copy_outlined, size: 18),
                     label: Text(
-                      isIncome ? 'Ghi lại khoản thu' : 'Ghi lại khoản chi',
+                      isIncome
+                          ? 'Tạo khoản thu tương tự'
+                          : 'Tạo khoản chi tương tự',
                     ),
                     onPressed: () async {
                       final saved = await showDialog<bool>(
@@ -287,8 +306,18 @@ class _TransactionDetailView extends ConsumerWidget {
                       if (isLinked)
                         _buildInfoRow(
                           'Nguồn dữ liệu',
-                          'Tự động từ chứng từ gốc',
+                          sourceId > 0
+                              ? '$sourceLabel #$sourceId'
+                              : sourceLabel,
                           c,
+                        ),
+                      if (sourceId > 0 && sourceRoute != null)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () => context.push(sourceRoute),
+                            child: const Text('Xem chứng từ gốc'),
+                          ),
                         ),
                       const Divider(height: 24),
                       _buildInfoRow(
@@ -529,20 +558,23 @@ class _TransactionDetailView extends ConsumerWidget {
       } catch (_) {}
     }
 
+    final isIncome = transaction['type']?.toString().toUpperCase() == 'INCOME';
+    final amount = _currFmt.format(asDouble(transaction['amount']));
     final recordInfo = [
+      'Khoản ${isIncome ? 'thu' : 'chi'} $amount',
       displayCode,
       if (counterparty.isNotEmpty) counterparty,
       if (dateLabel.isNotEmpty) dateLabel,
-    ].join(' - ');
+    ].join(' · ');
 
     AppConfirmModal.show(
       context,
       title: 'Xóa giao dịch',
-      message:
-          'Bạn có chắc chắn muốn xóa $recordInfo? Thao tác này chỉ xóa giao dịch được ghi nhận thủ công và tính toán lại số dư tiền; không xóa các chứng từ gốc.',
+      message: '$recordInfo\n\nSố dư sẽ được tính lại sau khi xóa khoản này.',
       confirmText: 'Xóa giao dịch',
       cancelText: 'Hủy',
       isDestructive: true,
+      maxWidth: 520,
     ).then((confirm) async {
       if (confirm == true) {
         try {

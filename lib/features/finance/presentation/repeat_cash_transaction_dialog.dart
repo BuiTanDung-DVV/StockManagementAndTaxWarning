@@ -150,7 +150,7 @@ class _RepeatCashTransactionDialogState
     return PopScope(
       canPop: !_saving,
       child: AlertDialog(
-        title: Text('Ghi lại khoản $label'),
+        title: Text('Tạo khoản $label tương tự'),
         content: SizedBox(
           width: 440,
           child: SingleChildScrollView(
@@ -161,7 +161,7 @@ class _RepeatCashTransactionDialogState
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Kiểm tra ngày và số tiền cho lần ghi mới. Giao dịch cũ được giữ nguyên.',
+                    'Số tiền, phương thức, đối tác và ghi chú được lấy từ khoản cũ. Kiểm tra lại trước khi lưu khoản mới.',
                   ),
                   const SizedBox(height: 16),
                   Text('Nhóm: ${financeCategoryLabel(widget.source.category)}'),
@@ -248,7 +248,14 @@ class _RepeatCashTransactionDialogState
                     enabled: !_saving,
                     maxLength: 500,
                     maxLines: 3,
-                    decoration: const InputDecoration(labelText: 'Ghi chú'),
+                    decoration: InputDecoration(
+                      labelText: 'Ghi chú',
+                      suffixIcon: IconButton(
+                        tooltip: 'Xóa ghi chú',
+                        onPressed: _saving ? null : _notes.clear,
+                        icon: const Icon(Icons.clear),
+                      ),
+                    ),
                   ),
                   if (_error != null)
                     Padding(

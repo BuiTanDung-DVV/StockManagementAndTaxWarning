@@ -459,15 +459,17 @@ class _DebtDetail extends StatelessWidget {
     final party = asInt(row[payable ? 'supplierId' : 'customerId']);
     final source = asInt(row[payable ? 'purchaseOrderId' : 'orderId']);
     final fields = <String, String>{
+      payable ? 'Còn phải trả' : 'Còn phải thu': _money(row['remaining']),
       payable ? 'Nhà cung cấp' : 'Khách hàng': _name(row, payable),
       'Ngày phát sinh': _date(row['createdAt']),
       'Hạn thanh toán': _date(row['dueDate']),
       'Nhóm tuổi nợ': agingBucketLabels[agingBucket(row)]!,
       'Giá trị ghi nợ': _money(row['amount'] ?? row['totalAmount']),
-      payable ? 'Đã trả' : 'Đã thu': _money(row['paidAmount']),
+      payable ? 'Đã trả vào khoản nợ này' : 'Đã thu vào khoản nợ này': _money(
+        row['paidAmount'],
+      ),
       if (asDouble(row['openingAdjustmentAmount']) != 0)
         'Điều chỉnh số dư đầu kỳ': _money(row['openingAdjustmentAmount']),
-      'Còn phải thanh toán': _money(row['remaining']),
       if (source > 0) 'Chứng từ nguồn': '${row['orderCode'] ?? '#$source'}',
     };
     return AlertDialog(

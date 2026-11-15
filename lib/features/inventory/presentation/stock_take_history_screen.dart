@@ -1,3 +1,5 @@
+import '../../../core/utils/report_xlsx_writer.dart';
+import 'widgets/inventory_excel_button.dart';
 import '../../../core/widgets/loaded_records_filter.dart';
 import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
@@ -110,13 +112,66 @@ class _StockTakeHistoryScreenState
                       vertical: 12,
                     ),
                     physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: items.length + 1,
+                    itemCount: items.length + 2,
                     separatorBuilder: (_, _) => Divider(
                       height: 1,
                       color: c.divider.withValues(alpha: 0.5),
                     ),
                     itemBuilder: (_, i) {
-                      if (i == items.length) {
+                      if (i == 0) {
+                        return Align(
+                          alignment: Alignment.centerRight,
+                          child: InventoryExcelButton(
+                            filename: 'Lich_su_kiem_ke_trang_$currentPage',
+                            title: 'LỊCH SỬ KIỂM KÊ',
+                            scope:
+                                'Trang $currentPage/$totalPages · Các phiếu đang hiển thị',
+                            headers: const [
+                              'Mã phiếu',
+                              'Ngày kiểm kê',
+                              'Kho',
+                              'Trạng thái',
+                              'Ghi chú',
+                            ],
+                            widths: const [23, 16, 26, 18, 50],
+                            records: [
+                              for (final st in items.whereType<Map>())
+                                [
+                                  XlsxCell.text(
+                                    (st['stockTakeCode'] ??
+                                            st['code'] ??
+                                            st['id'])
+                                        .toString(),
+                                  ),
+                                  XlsxCell.text(
+                                    (st['stockTakeDate'] ?? st['createdAt'])
+                                            ?.toString()
+                                            .split('T')
+                                            .first ??
+                                        '',
+                                  ),
+                                  XlsxCell.text(
+                                    (st['warehouse']?['name'] ??
+                                            st['warehouseName'] ??
+                                            '')
+                                        .toString(),
+                                  ),
+                                  XlsxCell.text(switch (st['status']) {
+                                    'COMPLETED' => 'Hoàn tất',
+                                    'CANCELLED' => 'Đã hủy',
+                                    'DRAFT' => 'Nháp',
+                                    final status => status?.toString() ?? '',
+                                  }),
+                                  XlsxCell.text(
+                                    (st['notes'] ?? st['note'] ?? '')
+                                        .toString(),
+                                  ),
+                                ],
+                            ],
+                          ),
+                        );
+                      }
+                      if (i == items.length + 1) {
                         return AppPaginationBar(
                           currentPage: currentPage,
                           totalPages: totalPages,
@@ -125,7 +180,7 @@ class _StockTakeHistoryScreenState
                           onPageChanged: (page) => setState(() => _page = page),
                         );
                       }
-                      final st = items[i] as Map;
+                      final st = items[i - 1] as Map;
                       final code =
                           st['stockTakeCode'] ?? st['code'] ?? 'ST-${st['id']}';
                       final stockTakeDate =
@@ -503,6 +558,41 @@ class _StockTakeHistoryScreenState
               ),
             ],
             const SizedBox(height: 16),
+            if (items.isNotEmpty)
+              InventoryExcelButton(
+                filename: 'Chi_tiet_kiem_ke_${st['id']}',
+                title: 'CHI TIẾT PHIẾU KIỂM KÊ',
+                scope:
+                    'Phiếu $code · ${st['stockTakeDate']?.toString().split('T').first ?? ''}',
+                label: 'Xuất Excel phiếu này',
+                headers: const [
+                  'Sản phẩm',
+                  'Tồn sổ sách',
+                  'Số kiểm đếm',
+                  'Chênh lệch',
+                ],
+                widths: const [48, 20, 20, 20],
+                records: [
+                  for (final item in items.whereType<Map>())
+                    [
+                      XlsxCell.text(
+                        (item['productName'] ??
+                                item['name'] ??
+                                item['product']?['name'] ??
+                                item['productId'] ??
+                                '')
+                            .toString(),
+                      ),
+                      InventoryExcelButton.number(
+                        item['systemQty'] ?? item['systemQuantity'],
+                      ),
+                      InventoryExcelButton.number(
+                        item['actualQty'] ?? item['actualQuantity'],
+                      ),
+                      InventoryExcelButton.number(item['difference']),
+                    ],
+                ],
+              ),
             Text(
               'Danh sách sản phẩm kiểm kê (${items.length})',
               style: GoogleFonts.inter(

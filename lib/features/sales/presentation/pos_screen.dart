@@ -28,6 +28,7 @@ import '../../settings/providers/operations_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../providers/sales_provider.dart';
+import '../services/sales_payment_sound.dart';
 import 'qr_payment_screen.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/utils/toast_service.dart';
@@ -110,7 +111,6 @@ class CartState {
   final String? trackingCode;
   final double shippingFee;
   final String shippingFeePayer;
-  final double shippingTaxRate;
 
   const CartState({
     this.draftStatus = 'saved',
@@ -124,7 +124,6 @@ class CartState {
     this.trackingCode,
     this.shippingFee = 0,
     this.shippingFeePayer = 'SHOP',
-    this.shippingTaxRate = 0,
   });
 
   double get subtotal =>
@@ -140,9 +139,8 @@ class CartState {
     });
   }
 
-  double get customerShippingCharge => shippingFeePayer == 'CUSTOMER'
-      ? shippingFee * (1 + shippingTaxRate / 100)
-      : 0;
+  double get customerShippingCharge =>
+      shippingFeePayer == 'CUSTOMER' ? shippingFee : 0;
   double get total => taxableSubtotal + taxAmount + customerShippingCharge;
   int get itemCount => items.fold(0, (sum, i) => sum + i.quantity);
 
@@ -161,7 +159,6 @@ class CartState {
     String? trackingCode,
     double? shippingFee,
     String? shippingFeePayer,
-    double? shippingTaxRate,
     bool clearShipping = false,
   }) {
     return CartState(
@@ -184,9 +181,6 @@ class CartState {
       shippingFeePayer: clearShipping
           ? 'SHOP'
           : (shippingFeePayer ?? this.shippingFeePayer),
-      shippingTaxRate: clearShipping
-          ? 0
-          : (shippingTaxRate ?? this.shippingTaxRate),
     );
   }
 }
@@ -213,7 +207,6 @@ Map<String, dynamic> _cartDraftData(CartState cart) => {
   'trackingCode': cart.trackingCode,
   'shippingFee': cart.shippingFee,
   'shippingFeePayer': cart.shippingFeePayer,
-  'shippingTaxRate': cart.shippingTaxRate,
 };
 
 CartState _restoreCart(Map<String, dynamic> data) => CartState(
@@ -238,7 +231,6 @@ CartState _restoreCart(Map<String, dynamic> data) => CartState(
   trackingCode: data['trackingCode'] as String?,
   shippingFee: (data['shippingFee'] as num? ?? 0).toDouble(),
   shippingFeePayer: data['shippingFeePayer'] as String? ?? 'SHOP',
-  shippingTaxRate: (data['shippingTaxRate'] as num? ?? 0).toDouble(),
 );
 
 /// Cart notifier (Riverpod v3 Notifier pattern)
@@ -503,7 +495,6 @@ class CartNotifier extends Notifier<CartState> {
     String? trackingCode,
     double fee = 0,
     String payer = 'SHOP',
-    double taxRate = 0,
   }) {
     if (!_editable) return;
     state = state.copyWith(
@@ -512,7 +503,6 @@ class CartNotifier extends Notifier<CartState> {
       trackingCode: trackingCode,
       shippingFee: fee,
       shippingFeePayer: payer,
-      shippingTaxRate: taxRate,
       clearShipping: carrierId == null,
     );
   }
@@ -2196,7 +2186,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       final cart = ref.read(_cartProvider);
       int? carrierId = cart.shippingCarrierId;
       String payer = cart.shippingFeePayer;
-      double taxRate = cart.shippingTaxRate;
       final fee = TextEditingController(
         text: cart.shippingFee.toStringAsFixed(0),
       );
@@ -2274,23 +2263,12 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       onSelectionChanged: (value) =>
                           setDialogState(() => payer = value.first),
                     ),
-                    if (payer == 'CUSTOMER') ...[
-                      const SizedBox(height: 10),
-                      DropdownButtonFormField<double>(
-                        initialValue: taxRate,
-                        decoration: const InputDecoration(
-                          labelText: 'Thuế suất phí giao hàng',
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 0, child: Text('0%')),
-                          DropdownMenuItem(value: 5, child: Text('5%')),
-                          DropdownMenuItem(value: 8, child: Text('8%')),
-                          DropdownMenuItem(value: 10, child: Text('10%')),
-                        ],
-                        onChanged: (value) =>
-                            setDialogState(() => taxRate = value ?? 0),
-                      ),
-                    ],
+                    const SizedBox(height: 8),
+                    Text(
+                      payer == 'CUSTOMER'
+                          ? 'Phí này được cộng vào số tiền khách phải trả.'
+                          : 'Phí này do cửa hàng chịu.',
+                    ),
                   ],
                 ),
               ),
@@ -2332,7 +2310,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               trackingCode: tracking.text.trim(),
               fee: parseCurrency(fee.text),
               payer: payer,
-              taxRate: taxRate,
             );
       }
       await route.completed;
@@ -2401,16 +2378,44 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
     setState(() => _creating = true);
     try {
-      Map<String, dynamic>? paymentShop;
+      final scope = ref.read(offlineScopeProvider);
+      if (scope == null) {
+        throw ApiException(
+          'Chọn một cửa hàng và chờ tải thông tin tài khoản trước khi ghi đơn.',
+        );
+      }
+      var bankId = '';
+      var accountNo = '';
+      var accountName = '';
       if (method == 'BANK_TRANSFER') {
-        paymentShop =
-            await ref.read(shopProfileProvider.future) ?? <String, dynamic>{};
-        if ((paymentShop['bankId'] ?? '').toString().trim().isEmpty ||
-            (paymentShop['bankAccount'] ?? '').toString().trim().isEmpty) {
-          ToastService.showError(
-            'Chưa cấu hình ngân hàng. Vào Cài đặt, chọn VietQR và tài khoản nhận tiền để thiết lập.',
-          );
+        final qr = await ref.read(shopPaymentQrProvider.future);
+        if (!mounted || ref.read(offlineScopeProvider)?.key != scope.key) {
           return;
+        }
+        final details = qr.details;
+        bankId = details?['bankBin']?.toString().trim() ?? '';
+        accountNo = details?['accountNumber']?.toString().trim() ?? '';
+        accountName = details?['accountName']?.toString().trim() ?? '';
+
+        if (!RegExp(r'^[0-9]{6}$').hasMatch(bankId) ||
+            !RegExp(r'^[A-Za-z0-9]{1,19}$').hasMatch(accountNo)) {
+          if (qr.imageUrl != null) {
+            throw ApiException(
+              'Ảnh QR chưa có thông tin tài khoản hợp lệ. Hãy tải lại ảnh VietQR nhận tiền trong Cài đặt.',
+            );
+          }
+          final shop = await ref.read(shopProfileProvider.future);
+          if (!mounted || ref.read(offlineScopeProvider)?.key != scope.key) {
+            return;
+          }
+          bankId = shop['bankId']?.toString().trim() ?? '';
+          accountNo = shop['bankAccount']?.toString().trim() ?? '';
+          accountName = shop['accountHolder']?.toString().trim() ?? '';
+          if (bankId.isEmpty || accountNo.isEmpty) {
+            throw ApiException(
+              'Chưa cấu hình tài khoản nhận tiền. Hãy tải ảnh VietQR hoặc nhập thông tin ngân hàng trong Cài đặt.',
+            );
+          }
         }
       }
       final items = cart.items
@@ -2433,7 +2438,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           'trackingCode': cart.trackingCode,
           'shippingFee': cart.shippingFee,
           'shippingFeePayer': cart.shippingFeePayer,
-          'shippingTaxRate': cart.shippingTaxRate,
           'deliveryStatus': 'PENDING',
         },
         'paymentMethod': method,
@@ -2441,12 +2445,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         'settleInFull': method == 'CASH',
         'paidAmount': 0,
       };
-      final scope = ref.read(offlineScopeProvider);
-      if (scope == null) {
-        throw ApiException(
-          'Chọn một cửa hàng và chờ tải thông tin tài khoản trước khi ghi đơn.',
-        );
-      }
       final result = await ref.read(salesRepoProvider).create(payload);
       if (!mounted || ref.read(offlineScopeProvider)?.key != scope.key) return;
       final orderCode = result['orderCode']?.toString() ?? '';
@@ -2474,13 +2472,12 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         ref.invalidate(customerListProvider); // to update customer debt
         ref.invalidate(cashAccountsProvider);
 
-        await _tts.setLanguage('vi-VN');
-        await _tts.setSpeechRate(0.45);
-
-        final msg = method == 'CASH'
-            ? 'Thanh toán tiền mặt thành công'
-            : 'Đã ghi nợ thành công';
-        await _tts.speak(msg);
+        unawaited(
+          (method == 'CASH'
+                  ? SalesPaymentSound.cashReceived
+                  : SalesPaymentSound.debtRecorded)
+              .play(),
+        );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -2502,11 +2499,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         ref.invalidate(productListProvider);
         ref.invalidate(lowStockProvider);
         ref.invalidate(customerListProvider);
-        final shop = paymentShop!;
-        final bankId = (shop['bankId'] ?? '').toString();
-        final accountNo = (shop['bankAccount'] ?? '').toString();
-        final accountName = (shop['accountHolder'] ?? '').toString();
-
         if (mounted) {
           final paid = await Navigator.of(context).push<bool>(
             MaterialPageRoute(
