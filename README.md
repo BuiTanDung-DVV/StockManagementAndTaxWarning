@@ -49,10 +49,15 @@ Cần Flutter SDK đi kèm Dart tương thích với ràng buộc `^3.11.0` tron
 Set-Location backend
 Copy-Item .env.example .env
 npm.cmd ci
+~~~
+
+Khai báo `DATABASE_URL` và cấu hình xác thực trong `backend/.env` theo [mẫu biến môi trường](backend/.env.example). Khai báo thêm thông tin cho Google Sign-In, email, Cloudinary và Gemini nếu sử dụng các tính năng tương ứng.
+
+~~~powershell
 npm.cmd run dev
 ~~~
 
-Trước khi chạy `npm.cmd run dev`, khai báo `DATABASE_URL` và cấu hình xác thực trong `backend/.env` theo [mẫu biến môi trường](backend/.env.example). Khai báo riêng thông tin cho Google Sign-In, email, Cloudinary và Gemini nếu cần sử dụng các tính năng tương ứng. API mặc định chạy ở cổng `8080`.
+API mặc định chạy tại `http://localhost:8080/api/`.
 
 **Flutter Web** — mở cửa sổ lệnh mới tại thư mục gốc.
 
@@ -63,7 +68,7 @@ flutter run -d chrome --dart-define=API_URL=http://localhost:8080/api/
 
 Với Google Sign-In trên web, cấu hình thêm `GOOGLE_WEB_CLIENT_ID` khi build và khai báo origin được phép của ứng dụng trong cấu hình OAuth.
 
-## Kiểm tra và triển khai
+## Kiểm tra
 
 ~~~powershell
 flutter analyze
@@ -72,7 +77,15 @@ npm.cmd --prefix backend run build
 
 Các bộ kiểm thử và dữ liệu kiểm thử được quản lý cục bộ. Những lệnh kiểm thử phụ thuộc vào tệp trong `test/` hoặc `backend/test/` cần bộ kiểm thử tương ứng trên máy.
 
-Bản web được build qua [build_vercel.sh](build_vercel.sh). [Cấu hình Vercel của web](vercel.json) chuyển các yêu cầu `/api/` đến API triển khai riêng theo [cấu hình backend](backend/vercel.json). Tệp `.env` chứa thông tin kết nối và bí mật phải được giữ cục bộ hoặc khai báo trong môi trường triển khai.
+## Triển khai web trên Vercel
+
+1. Chuẩn bị PostgreSQL với lược đồ SmartStock và các migration cần cho phiên bản triển khai.
+2. Tạo dự án Vercel cho API, chọn `backend` làm **Root Directory** và cấu hình biến môi trường production theo `backend/.env.example`. Triển khai API theo [backend/vercel.json](backend/vercel.json) rồi lấy tên miền API.
+3. Tạo dự án Vercel cho Flutter Web từ thư mục gốc của kho mã. Nếu dùng tên miền API riêng, cập nhật đích chuyển tiếp `/api/` trong [vercel.json](vercel.json). Tệp [build_vercel.sh](build_vercel.sh) biên dịch ứng dụng và kiểm tra gói web trong `build/web`.
+4. Nếu bật Google Sign-In, đặt `GOOGLE_WEB_CLIENT_ID` cho bản web, cấu hình `GOOGLE_CLIENT_IDS` ở API và thêm origin web vào danh sách được phép trong OAuth.
+5. Sau khi triển khai, mở tên miền web và kiểm tra đăng nhập, chọn cửa hàng và tải danh sách sản phẩm.
+
+Xem cách thiết lập [hai dự án từ cùng một kho mã](https://vercel.com/docs/monorepos) và [biến môi trường trên Vercel](https://vercel.com/docs/environment-variables).
 
 ## Phạm vi commit lên GitHub
 
