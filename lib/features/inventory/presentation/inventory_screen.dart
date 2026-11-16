@@ -1935,6 +1935,7 @@ class _InventoryIssueRow extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
+                    flex: 3,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1963,7 +1964,8 @@ class _InventoryIssueRow extends StatelessWidget {
                   ),
                   if (!compact) ...[
                     const SizedBox(width: AppSpacing.sm),
-                    Flexible(
+                    Expanded(
+                      flex: 2,
                       child: Text(
                         status,
                         maxLines: 1,
@@ -1978,7 +1980,7 @@ class _InventoryIssueRow extends StatelessWidget {
                     ),
                   ],
                   if (productId != null) ...[
-                    const SizedBox(width: AppSpacing.xs),
+                    const SizedBox(width: AppSpacing.sm),
                     AppIcon(
                       Icons.chevron_right_rounded,
                       size: 20,

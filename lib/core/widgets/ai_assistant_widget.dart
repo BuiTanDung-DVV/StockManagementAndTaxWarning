@@ -505,7 +505,7 @@ class _AssistantPanel extends StatelessWidget {
                 itemCount: messages.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) =>
-                    _MessageBlock(message: messages[index]),
+                    _MessageBlock(message: messages[index], expanded: expanded),
               ),
             ),
             if (messages.length == 1)
@@ -741,19 +741,23 @@ class _AssistantPanelHeader extends StatelessWidget {
 class _MessageBlock extends ConsumerWidget {
   final _AssistantMessage message;
 
-  const _MessageBlock({required this.message});
+  final bool expanded;
+
+  const _MessageBlock({required this.message, required this.expanded});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppThemeColors.of(context);
     final primary = Theme.of(context).colorScheme.primary;
+    final wideReply = expanded && !message.fromUser;
 
     return Align(
       alignment: message.fromUser
           ? Alignment.centerRight
           : Alignment.centerLeft,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 340),
+        width: wideReply ? double.infinity : null,
+        constraints: wideReply ? null : const BoxConstraints(maxWidth: 340),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: message.fromUser
