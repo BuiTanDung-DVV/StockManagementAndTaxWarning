@@ -328,11 +328,7 @@ class _InventoryShelvesScreenState
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 48,
-                          color: c.textMuted,
-                        ),
+                        Icon(Icons.error_outline, size: 48, color: c.textMuted),
                         const SizedBox(height: 12),
                         Text(
                           'Không tải được sơ đồ.',
@@ -654,8 +650,8 @@ class _InventoryShelvesScreenState
                             matchingRacks: matchingRacks,
                             selectedRackCode:
                                 _selectedRack?.$1 == selectedWarehouseId
-                                    ? _selectedRack?.$3
-                                    : null,
+                                ? _selectedRack?.$3
+                                : null,
                             onSelectRack: (rackCode) {
                               setState(() {
                                 _selectedRack = rackCode == null
@@ -842,9 +838,9 @@ class _RackFloorState extends State<_RackFloor> {
         _extraRows = previous.rows;
         _selection = oldSelection;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Không lưu được bố trí kho.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không lưu được bố trí kho.')),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -1068,12 +1064,16 @@ class _RackFloorState extends State<_RackFloor> {
                               behavior: HitTestBehavior.opaque,
                               onTapDown: (details) {
                                 if (_placement != null) {
-                                  final normX = (details.localPosition.dx /
-                                          width)
-                                      .clamp(0.0, 1.0);
-                                  final normY = (details.localPosition.dy /
-                                          height)
-                                      .clamp(0.0, 1.0);
+                                  final normX =
+                                      (details.localPosition.dx / width).clamp(
+                                        0.0,
+                                        1.0,
+                                      );
+                                  final normY =
+                                      (details.localPosition.dy / height).clamp(
+                                        0.0,
+                                        1.0,
+                                      );
                                   _place(
                                     (id: null, kind: _placement),
                                     Offset(normX, normY),
@@ -1406,8 +1406,9 @@ class _RackFloorState extends State<_RackFloor> {
                               icon: const Icon(Icons.swap_horiz, size: 18),
                               onPressed: () {
                                 final b = _blockFor(selectedItem);
-                                final nextWidth =
-                                    (selectedItem.width >= 1.2 ? 1.0 : 1.2);
+                                final nextWidth = (selectedItem.width >= 1.2
+                                    ? 1.0
+                                    : 1.2);
                                 final nextCols =
                                     (b.columns *
                                             (nextWidth / selectedItem.width))
@@ -1433,9 +1434,8 @@ class _RackFloorState extends State<_RackFloor> {
                                     horizontal: 8,
                                   ),
                                 ),
-                                onPressed: () => widget.onAssignRack(
-                                  selectedItem.rackCode,
-                                ),
+                                onPressed: () =>
+                                    widget.onAssignRack(selectedItem.rackCode),
                                 icon: const Icon(
                                   Icons.add_location_alt_outlined,
                                   size: 16,
@@ -1492,11 +1492,8 @@ class _RackFloorState extends State<_RackFloor> {
                                 IconButton(
                                   tooltip: 'Hoàn tác',
                                   icon: const Icon(Icons.undo, size: 20),
-                                  onPressed: () => _save(
-                                    _undo!.objects,
-                                    null,
-                                    undo: true,
-                                  ),
+                                  onPressed: () =>
+                                      _save(_undo!.objects, null, undo: true),
                                 ),
                                 const SizedBox(width: 8),
                               ],
@@ -1699,6 +1696,10 @@ class _RackFloorState extends State<_RackFloor> {
     AppThemeColors c,
   ) {
     final hasStock = positions.isNotEmpty;
+    final steelColor = isSelected
+        ? c.primary
+        : (hasStock ? const Color(0xFF2563EB) : const Color(0xFF64748B));
+    final beamColor = isSelected ? c.primary : const Color(0xFFEA580C);
 
     final borderColor = isSelected
         ? c.primary
@@ -1720,7 +1721,7 @@ class _RackFloorState extends State<_RackFloor> {
       margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: borderColor,
           width: isSelected || isSearchMatch ? 2.2 : 1.2,
@@ -1736,82 +1737,157 @@ class _RackFloorState extends State<_RackFloor> {
             ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Stack(
         children: [
-          // Header: Rack Name & Count Badge
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Kệ $rackCode',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? c.primary : c.textPrimary,
+          // Left upright steel frame
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 4,
+            child: Container(
+              decoration: BoxDecoration(
+                color: steelColor.withValues(alpha: 0.8),
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(5),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 5,
-                  vertical: 1.5,
+            ),
+          ),
+          // Right upright steel frame
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: 4,
+            child: Container(
+              decoration: BoxDecoration(
+                color: steelColor.withValues(alpha: 0.8),
+                borderRadius: const BorderRadius.horizontal(
+                  right: Radius.circular(5),
                 ),
-                decoration: BoxDecoration(
-                  color: hasStock
-                      ? Colors.teal.shade700
-                      : c.textMuted.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Header: Rack Name & Count Badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Kệ $rackCode',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? c.primary : c.textPrimary,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1.5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: hasStock
+                            ? Colors.teal.shade700
+                            : c.textMuted.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        hasStock ? '${positions.length} SP' : 'Trống',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: hasStock ? Colors.white : c.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Text(
-                  hasStock ? '${positions.length} SP' : 'Trống',
+
+                // Industrial Shelf Bays with Cargo Boxes / Pallets
+                Container(
+                  height: 14,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: beamColor.withValues(alpha: 0.7),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: List.generate(4, (index) {
+                      final isSlotOccupied = index < positions.length;
+                      final isMatch =
+                          isSlotOccupied &&
+                          widget.searchQuery.isNotEmpty &&
+                          ('${positions[index]['productName']} ${positions[index]['sku']}')
+                              .toLowerCase()
+                              .contains(widget.searchQuery);
+
+                      return Expanded(
+                        child: Container(
+                          margin: EdgeInsets.only(right: index < 3 ? 2 : 0),
+                          alignment: Alignment.bottomCenter,
+                          child: isSlotOccupied
+                              ? Container(
+                                  height: 11,
+                                  decoration: BoxDecoration(
+                                    color: isMatch
+                                        ? Colors.amber.shade400
+                                        : const Color(0xFFD97706),
+                                    borderRadius: BorderRadius.circular(1.5),
+                                    border: Border.all(
+                                      color: isMatch
+                                          ? Colors.amber.shade800
+                                          : const Color(0xFF92400E),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Container(
+                                      width: 3,
+                                      height: 2,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Container(
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: c.divider.withValues(alpha: 0.5),
+                                      width: 0.8,
+                                    ),
+                                    borderRadius: BorderRadius.circular(1),
+                                  ),
+                                ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+
+                // Footer Summary
+                Text(
+                  hasStock ? '${positions.length} mặt hàng' : 'Chưa có hàng',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: hasStock ? Colors.white : c.textSecondary,
+                    color: hasStock ? c.textSecondary : c.textMuted,
                   ),
                 ),
-              ),
-            ],
-          ),
-
-          // Mini Heatmap Bay Slots (Visual Shelves)
-          Row(
-            children: List.generate(4, (index) {
-              final isSlotOccupied = index < positions.length;
-              final isMatch =
-                  isSlotOccupied &&
-                  widget.searchQuery.isNotEmpty &&
-                  ('${positions[index]['productName']} ${positions[index]['sku']}')
-                      .toLowerCase()
-                      .contains(widget.searchQuery);
-
-              return Expanded(
-                child: Container(
-                  height: 10,
-                  margin: EdgeInsets.only(right: index < 3 ? 3 : 0),
-                  decoration: BoxDecoration(
-                    color: isMatch
-                        ? Colors.amber.shade500
-                        : isSlotOccupied
-                        ? Colors.teal.shade500
-                        : c.divider.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              );
-            }),
-          ),
-
-          // Footer Summary
-          Text(
-            hasStock ? '${positions.length} mặt hàng' : 'Chưa có hàng',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 10,
-              color: hasStock ? c.textSecondary : c.textMuted,
+              ],
             ),
           ),
         ],

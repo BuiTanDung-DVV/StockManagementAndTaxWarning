@@ -969,15 +969,19 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
         children: [
           Row(
             children: [
-              Text(
-                'Danh sách kiểm đếm (${_items.length})',
-                style: GoogleFonts.manrope(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: c.textPrimary,
+              Expanded(
+                child: Text(
+                  'Danh sách kiểm đếm (${_items.length})',
+                  style: GoogleFonts.manrope(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: c.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               // Quick action: Tìm SP để thêm
               ElevatedButton.icon(
                 onPressed: () => _openProductPickerModal(
