@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import * as inventoryCtrl from '../controllers/inventory.controller';
+import * as inventoryShelfCtrl from '../controllers/inventory-shelf.controller';
+import * as inventoryLoanCtrl from '../controllers/inventory-loan.controller';
 import { requirePermission } from '../middleware/permission.middleware';
 
 const router = Router();
@@ -8,6 +10,12 @@ import { lockTransactionMiddleware } from '../middleware/lock-transaction.middle
 router.use(lockTransactionMiddleware);
 
 // Inventory base routes
+router.get('/inventory/shelf-positions', requirePermission('inventory', 'view'), inventoryShelfCtrl.list);
+router.put('/inventory/shelf-positions', requirePermission('inventory', 'edit'), inventoryShelfCtrl.save);
+router.get('/inventory/loans', requirePermission('inventory', 'view'), inventoryLoanCtrl.list);
+router.post('/inventory/loans', requirePermission('inventory', 'edit'), inventoryLoanCtrl.request);
+router.post('/inventory/loans/:id/shipments', requirePermission('inventory', 'edit'), inventoryLoanCtrl.ship);
+router.post('/inventory/loan-shipments/:id/receipts', requirePermission('inventory', 'edit'), inventoryLoanCtrl.receive);
 router.get('/inventory/stock', requirePermission('inventory', 'view', { allowAllShops: true }), inventoryCtrl.getStock);
 router.get('/inventory/low-stock', requirePermission('inventory', 'view', { allowAllShops: true }), inventoryCtrl.getLowStock);
 router.get('/inventory/movements', requirePermission('inventory', 'view'), inventoryCtrl.getMovements);

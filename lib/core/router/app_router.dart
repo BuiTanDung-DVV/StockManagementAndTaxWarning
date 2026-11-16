@@ -1,5 +1,8 @@
 import '../../features/settings/presentation/help_center_screen.dart';
 import '../../features/inventory/models/invoice_purchase_source.dart';
+import '../../features/inventory/presentation/partner_shops_screen.dart';
+import '../../features/inventory/presentation/inventory_shelves_screen.dart';
+import '../../features/inventory/presentation/inventory_loans_screen.dart';
 import '../../features/settings/presentation/min_stock_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -377,6 +380,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           // Inventory
+          GoRoute(
+            path: '/inventory/loans',
+            builder: (_, _) => const InventoryLoansScreen(),
+          ),
+          GoRoute(
+            path: '/inventory/shelves',
+            builder: (_, _) => const InventoryShelvesScreen(),
+          ),
+          GoRoute(
+            path: '/inventory/partner-shops',
+            builder: (_, _) => const PartnerShopsScreen(),
+          ),
           GoRoute(
             path: '/inventory',
             builder: (_, state) => InventoryScreen(

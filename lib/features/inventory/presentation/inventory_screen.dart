@@ -166,7 +166,10 @@ class InventoryScreen extends ConsumerWidget {
                       ),
                     ),
                   const SizedBox(height: AppSpacing.md),
-                  _InventoryQuickActions(canManageProducts: canManageProducts),
+                  _InventoryQuickActions(
+                    canManageProducts: canManageProducts,
+                    canManagePartners: shopState.isOwner,
+                  ),
                   const SizedBox(height: AppSpacing.lg),
                   _InventoryActionWorkspace(
                     lowStock: lowStockAsync,
@@ -1100,8 +1103,12 @@ class _InventoryAbcImageFallback extends StatelessWidget {
 
 class _InventoryQuickActions extends StatelessWidget {
   final bool canManageProducts;
+  final bool canManagePartners;
 
-  const _InventoryQuickActions({required this.canManageProducts});
+  const _InventoryQuickActions({
+    required this.canManageProducts,
+    required this.canManagePartners,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1126,6 +1133,22 @@ class _InventoryQuickActions extends StatelessWidget {
         label: 'Báo cáo xuất nhập tồn',
         assetPath: AppAssets.emptyDocument,
         onTap: () => context.push('/xnt-report'),
+      ),
+      if (canManagePartners)
+        _InventoryQuickAction(
+          label: 'Đối tác kho',
+          assetPath: AppAssets.inventory,
+          onTap: () => context.push('/inventory/partner-shops'),
+        ),
+      _InventoryQuickAction(
+        label: 'Phiếu mượn hàng',
+        assetPath: AppAssets.orders,
+        onTap: () => context.push('/inventory/loans'),
+      ),
+      _InventoryQuickAction(
+        label: 'Sơ đồ kệ',
+        assetPath: AppAssets.inventory,
+        onTap: () => context.push('/inventory/shelves'),
       ),
     ];
 
