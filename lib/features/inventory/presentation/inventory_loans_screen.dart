@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/offline/offline_store.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../../settings/providers/shop_provider.dart';
 
 typedef _Row = Map<String, dynamic>;
@@ -164,37 +166,74 @@ class _InventoryLoansScreenState extends ConsumerState<InventoryLoansScreen> {
                       child: const Text('Không tải được phiếu. Thử lại'),
                     ),
                   ),
-                  data: (loans) => ListView(
-                    padding: const EdgeInsets.all(20),
-                    children: [
-                      if (shop.isOwner)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: FilledButton.icon(
-                            onPressed: _busy
-                                ? null
-                                : () => _change(
-                                    id,
-                                    _loans,
-                                    'Gửi yêu cầu mượn',
-                                    2147483647,
-                                    create: true,
-                                    warehouse: true,
-                                    product: true,
-                                  ),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Yêu cầu mượn'),
-                          ),
-                        ),
-                      if (loans.isEmpty)
-                        const ListTile(title: Text('Chưa có phiếu mượn hàng.')),
-                      for (final loan in loans)
-                        _loanCard(
-                          id,
-                          loan,
-                          shop.hasPermission('inventory', 'edit'),
-                        ),
-                    ],
+                  data: (loans) => SingleChildScrollView(
+                    child: AppResponsiveContent(
+                      maxWidth: 1000,
+                      verticalPadding: 20,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (shop.isOwner)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: FilledButton.icon(
+                                onPressed: _busy
+                                    ? null
+                                    : () => _change(
+                                        id,
+                                        _loans,
+                                        'Gửi yêu cầu mượn',
+                                        2147483647,
+                                        create: true,
+                                        warehouse: true,
+                                        product: true,
+                                      ),
+                                icon: const Icon(Icons.add),
+                                label: const Text('Yêu cầu mượn'),
+                              ),
+                            ),
+                          if (loans.isEmpty)
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(32),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.swap_horiz,
+                                      size: 36,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'Chưa có phiếu mượn hàng',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                    if (shop.isOwner)
+                                      TextButton(
+                                        onPressed: () => context.push(
+                                          '/inventory/partner-shops',
+                                        ),
+                                        child: const Text(
+                                          'Quản lý đối tác kho',
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          for (final loan in loans)
+                            _loanCard(
+                              id,
+                              loan,
+                              shop.hasPermission('inventory', 'edit'),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
     );

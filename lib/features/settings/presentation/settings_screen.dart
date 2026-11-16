@@ -195,6 +195,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
         ],
       ),
+      if (!shopState.isAllShops &&
+          (shopState.isOwner || shopState.hasPermission('inventory')))
+        _SettingsSectionData(
+          title: 'Kho và điều chuyển',
+          icon: Icons.warehouse_outlined,
+          iconColor: const Color(0xFF0F766E),
+          entries: [
+            _SettingsEntry(
+              label: 'Sơ đồ kệ',
+              description: 'Bố trí kệ và tra cứu vị trí sản phẩm.',
+              icon: Icons.view_in_ar_outlined,
+              iconColor: const Color(0xFF0F766E),
+              onTap: () => context.push('/inventory/shelves'),
+            ),
+            _SettingsEntry(
+              label: 'Phiếu mượn hàng',
+              description:
+                  'Theo dõi hàng mượn, hàng đang giao và hàng phải hoàn.',
+              icon: Icons.swap_horiz,
+              iconColor: const Color(0xFF0F766E),
+              onTap: () => context.push('/inventory/loans'),
+            ),
+            if (shopState.isOwner)
+              _SettingsEntry(
+                label: 'Đối tác kho',
+                description: 'Quản lý liên kết với cửa hàng cho mượn hàng.',
+                icon: Icons.handshake_outlined,
+                iconColor: const Color(0xFF0F766E),
+                onTap: () => context.push('/inventory/partner-shops'),
+              ),
+          ],
+        ),
       _SettingsSectionData(
         title: tr.settings.sectionShopPayment,
         icon: Icons.storefront_rounded,
