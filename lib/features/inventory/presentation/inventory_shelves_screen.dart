@@ -1085,22 +1085,7 @@ class _RackFloorState extends State<_RackFloor> {
                                   widget.onSelectRack(null);
                                 }
                               },
-                              child: CustomPaint(
-                                painter: _WarehouseFloorPainter(
-                                  columns: _columns,
-                                  rows: _rows,
-                                  cellSize: _cellSize,
-                                  themeColors: c,
-                                  is3d: _is3dView,
-                                ),
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    for (final item in layout.values)
-                                      _buildTile(item, layout, c, isDesktop),
-                                  ],
-                                ),
-                              ),
+                              child: _buildFloorSurface(layout, c, isDesktop),
                             );
                           },
                         ),
@@ -1272,6 +1257,7 @@ class _RackFloorState extends State<_RackFloor> {
                           setState(() {
                             _editing = !_editing;
                             _placement = null;
+                            if (_editing) _is3dView = false;
                             if (!_editing) _selection = null;
                           });
                         },
@@ -1614,6 +1600,229 @@ class _RackFloorState extends State<_RackFloor> {
         ),
       ),
       child: chipWrapped,
+    );
+  }
+
+  Widget _buildFloorSurface(
+    Map<String, _FloorObject> layout,
+    AppThemeColors c,
+    bool isDesktop,
+  ) {
+    Widget floorCanvas = CustomPaint(
+      painter: _WarehouseFloorPainter(
+        columns: _columns,
+        rows: _rows,
+        cellSize: _cellSize,
+        themeColors: c,
+        is3d: _is3dView,
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (final item in layout.values)
+            _buildTile(item, layout, c, isDesktop),
+          if (_is3dView) _buildForkliftVisual(c),
+        ],
+      ),
+    );
+
+    if (_is3dView) {
+      floorCanvas = AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        transformAlignment: Alignment.center,
+        transform: Matrix4.identity()
+          ..setEntry(3, 2, 0.0006)
+          ..rotateX(46 * math.pi / 180)
+          ..rotateZ(-36 * math.pi / 180),
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 40,
+              offset: const Offset(-20, 30),
+            ),
+          ],
+        ),
+        child: floorCanvas,
+      );
+    }
+
+    return floorCanvas;
+  }
+
+  Widget _buildForkliftVisual(AppThemeColors c) {
+    double x = 2 * _cellSize;
+    double y = (_rows - 3).clamp(1, _rows - 2) * _cellSize;
+
+    final aisle = _objects.values
+        .where(
+          (o) =>
+              o.kind == _FixtureKind.aisle || o.kind == _FixtureKind.receiving,
+        )
+        .firstOrNull;
+    if (aisle != null && aisle.block != null) {
+      x = aisle.block!.column * _cellSize + 4;
+      y = aisle.block!.row * _cellSize - 8;
+    }
+
+    return Positioned(
+      left: x,
+      top: y,
+      child: IgnorePointer(
+        ignoring: true,
+        child: SizedBox(
+          width: _cellSize * 2.2,
+          height: _cellSize * 1.4,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Shadow
+              Positioned(
+                left: 6,
+                bottom: 2,
+                width: 50,
+                height: 10,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.28),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              // Body
+              Positioned(
+                left: 6,
+                bottom: 6,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Cab & Engine
+                    Container(
+                      width: 32,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEAB308), // OSHA yellow
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color: const Color(0xFFCA8A04),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Stack(
+                        children: [
+                          // ROPS cage
+                          Positioned(
+                            top: 2,
+                            left: 3,
+                            right: 6,
+                            height: 12,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E293B),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                              child: Center(
+                                child: Container(
+                                  width: 10,
+                                  height: 6,
+                                  color: Colors.lightBlueAccent.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Amber beacon
+                          Positioned(
+                            top: -2,
+                            left: 6,
+                            child: Container(
+                              width: 4,
+                              height: 4,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF97316),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                          // Wheels
+                          Positioned(
+                            bottom: -3,
+                            left: 3,
+                            child: Container(
+                              width: 8,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0F172A),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: -3,
+                            right: 3,
+                            child: Container(
+                              width: 7,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0F172A),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    // Mast beam
+                    Container(
+                      width: 4,
+                      height: 30,
+                      color: const Color(0xFF334155),
+                    ),
+                    // Pallet & Cargo box
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD97706),
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(
+                              color: const Color(0xFF92400E),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 4,
+                              height: 3,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          width: 18,
+                          height: 3,
+                          color: const Color(0xFFB45309), // Pallet
+                        ),
+                        Container(
+                          width: 16,
+                          height: 2,
+                          color: const Color(0xFF64748B), // Forks
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1997,6 +2206,267 @@ class _RackFloorState extends State<_RackFloor> {
     );
   }
 
+  Widget _buildRackElevationDiagram(
+    String rackCode,
+    List<Map<String, dynamic>> positions,
+    AppThemeColors c,
+  ) {
+    const totalLevels = 3;
+    const totalBins = 3;
+    const slotTotal = totalLevels * totalBins;
+
+    final slotMap = <String, Map<String, dynamic>>{};
+    for (final p in positions) {
+      final lvl = (p['level'] as num?)?.toInt() ?? 1;
+      final bin = (p['bin'] as num?)?.toInt() ?? 1;
+      slotMap['$lvl-$bin'] = p;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: c.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.view_in_ar_outlined,
+                      size: 15,
+                      color: Color(0xFF2563EB),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'MẶT DỰNG KỆ 3D (RACK ELEVATION)',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                          color: c.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: positions.isEmpty
+                      ? c.divider.withValues(alpha: 0.3)
+                      : Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: positions.isEmpty ? c.divider : Colors.teal.shade300,
+                  ),
+                ),
+                child: Text(
+                  'Lấp đầy: ${positions.length}/$slotTotal ô (${(positions.length / slotTotal * 100).toStringAsFixed(0)}%)',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: positions.isEmpty
+                        ? c.textMuted
+                        : Colors.teal.shade800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Khung thép Pallet Rack 3 tầng
+          Container(
+            height: 120,
+            decoration: BoxDecoration(
+              color: c.surface,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: const Color(0xFF1E40AF), width: 1.5),
+            ),
+            child: Stack(
+              children: [
+                // Cột thép trái
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 6,
+                  child: Container(color: const Color(0xFF1E40AF)),
+                ),
+                // Cột thép phải
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 6,
+                  child: Container(color: const Color(0xFF1E40AF)),
+                ),
+                // 3 tầng T3 -> T1
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  child: Column(
+                    children: [
+                      for (int lvl = totalLevels; lvl >= 1; lvl--) ...[
+                        Expanded(
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 22,
+                                child: Text(
+                                  'T$lvl',
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1E40AF),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    for (
+                                      int bin = 1;
+                                      bin <= totalBins;
+                                      bin++
+                                    ) ...[
+                                      if (bin > 1) const SizedBox(width: 4),
+                                      Expanded(
+                                        child: _buildBaySlot(
+                                          slotMap['$lvl-$bin'],
+                                          lvl,
+                                          bin,
+                                          rackCode,
+                                          c,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Thanh dầm cam OSHA
+                        Container(
+                          margin: const EdgeInsets.only(
+                            left: 22,
+                            top: 1,
+                            bottom: 2,
+                          ),
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEA580C),
+                            borderRadius: BorderRadius.circular(1),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBaySlot(
+    Map<String, dynamic>? slotItem,
+    int level,
+    int bin,
+    String rackCode,
+    AppThemeColors c,
+  ) {
+    final hasItem = slotItem != null;
+
+    if (hasItem) {
+      return Tooltip(
+        message:
+            'Tầng $level · Ô $bin: ${slotItem['productName']} (SKU: ${slotItem['sku']})',
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEF3C7),
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(color: const Color(0xFFD97706), width: 0.8),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 14,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD97706),
+                      borderRadius: BorderRadius.circular(1.5),
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 4,
+                        height: 2,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                slotItem['sku']?.toString() ?? 'SP',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF92400E),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: widget.canEdit ? () => widget.onAssignRack(rackCode) : null,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(
+            color: c.divider.withValues(alpha: 0.6),
+            width: 0.6,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            'Ô $bin',
+            style: TextStyle(
+              fontSize: 8,
+              color: c.textMuted.withValues(alpha: 0.7),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInspectionContent(String rackCode, AppThemeColors c) {
     final positions = widget.racks[rackCode] ?? [];
 
@@ -2100,6 +2570,13 @@ class _RackFloorState extends State<_RackFloor> {
             ],
           ),
         ),
+
+        // 3D Multi-tier Rack Elevation Diagram
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: _buildRackElevationDiagram(rackCode, positions, c),
+        ),
+        const SizedBox(height: 8),
 
         // Products List
         Expanded(
