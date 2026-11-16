@@ -479,14 +479,33 @@ enum _FixtureKind {
   door('Cửa ra vào', Icons.door_front_door_outlined),
   counter('Quầy', Icons.storefront_outlined),
   receiving('Khu nhận hàng', Icons.move_to_inbox_outlined),
-  wall('Vách ngăn', Icons.view_week_outlined);
+  wall('Vách ngăn', Icons.view_week_outlined),
+  pallet('Pallet', Icons.layers_outlined),
+  coldStorage('Tủ mát', Icons.ac_unit_outlined),
+  display('Bàn trưng bày', Icons.table_restaurant_outlined),
+  bulk('Hàng cồng kềnh', Icons.inventory_2_outlined),
+  dispatch('Khu giao hàng', Icons.local_shipping_outlined);
 
   const _FixtureKind(this.label, this.icon);
   final String label;
   final IconData icon;
+
+  (int, int) get footprint => switch (this) {
+    rack || pallet || coldStorage || display => (3, 2),
+    aisle || wall => (4, 1),
+    door => (2, 1),
+    counter => (4, 2),
+    receiving || dispatch || bulk => (4, 3),
+  };
 }
 
 typedef _SceneDrag = ({String? id, _FixtureKind? kind});
+typedef _GridBlock = ({int column, int row, int columns, int rows});
+typedef _FloorSnapshot = ({
+  Map<String, _FloorObject> objects,
+  int columns,
+  int rows,
+});
 
 class _FloorObject {
   const _FloorObject({
@@ -498,6 +517,7 @@ class _FloorObject {
     this.height = 1,
     this.rotation = 0,
     this.manualRack = false,
+    this.block,
   });
 
   factory _FloorObject.fromJson(Map<String, dynamic> json) {
@@ -510,6 +530,15 @@ class _FloorObject {
       height: (json['height'] as num).toDouble().clamp(.6, 1.8),
       rotation: (json['rotation'] as int) % 4,
       manualRack: json['manualRack'] == true,
+      block: switch (json['block']) {
+        [int column, int row, int columns, int rows] => (
+          column: column,
+          row: row,
+          columns: columns,
+          rows: rows,
+        ),
+        _ => null,
+      },
     );
   }
 
@@ -518,6 +547,7 @@ class _FloorObject {
   final double x, y, width, height;
   final int rotation;
   final bool manualRack;
+  final _GridBlock? block;
   bool get stockRack => id.startsWith('stock:');
 
   Map<String, dynamic> toJson() => {
@@ -529,6 +559,8 @@ class _FloorObject {
     'height': height,
     'rotation': rotation,
     if (manualRack) 'manualRack': true,
+    if (block case final grid?)
+      'block': [grid.column, grid.row, grid.columns, grid.rows],
   };
 
   _FloorObject copyWith({
@@ -537,6 +569,7 @@ class _FloorObject {
     double? width,
     double? height,
     int? rotation,
+    _GridBlock? block,
   }) => _FloorObject(
     id: id,
     kind: kind,
@@ -546,14 +579,22 @@ class _FloorObject {
     height: height ?? this.height,
     rotation: rotation ?? this.rotation,
     manualRack: manualRack,
+    block: block ?? this.block,
   );
 }
 
 class _RackFloorState extends State<_RackFloor> {
+  static const _baseColumns = 20;
+  static const _maxGridSize = 100;
   final _floorKey = GlobalKey();
   final _viewport = TransformationController();
   Map<String, _FloorObject> _objects = {};
-  Map<String, _FloorObject>? _undo;
+  _FloorSnapshot? _undo;
+  int _extraColumns = 0;
+  int _extraRows = 0;
+  _GridBlock? _resizeStart;
+  _GridBlock? _resizePreview;
+  Offset _resizeDelta = Offset.zero;
   String? _selection;
   bool _editing = false;
   bool _saving = false;
@@ -562,6 +603,20 @@ class _RackFloorState extends State<_RackFloor> {
   _FixtureKind? _placement;
   Offset? _placementPoint;
   int _angle = 0;
+
+  int get _baseRows => math
+      .max(10, ((widget.racks.length + 2) ~/ 3) * 3 + 1)
+      .clamp(10, _maxGridSize);
+  int get _columns => _baseColumns + _extraColumns;
+  int get _rows => _objects.values.fold(
+    math.min(_baseRows + _extraRows, _maxGridSize),
+    (height, item) {
+      final block = item.block;
+      return block == null
+          ? height
+          : math.max(height, (block.row + block.rows).clamp(1, _maxGridSize));
+    },
+  );
 
   @override
   void initState() {
@@ -574,14 +629,24 @@ class _RackFloorState extends State<_RackFloor> {
       final prefs = await SharedPreferences.getInstance();
       final json = prefs.getString(widget.storageKey);
       if (json != null) {
-        final objects = (jsonDecode(json) as List).map(
+        final decoded = jsonDecode(json);
+        final saved = decoded is Map<String, dynamic> ? decoded : null;
+        final objects = ((saved?['objects'] ?? decoded) as List).map(
           (value) =>
               _FloorObject.fromJson(Map<String, dynamic>.from(value as Map)),
         );
         if (mounted) {
-          setState(
-            () => _objects = {for (final item in objects) item.id: item},
-          );
+          setState(() {
+            _objects = {for (final item in objects) item.id: item};
+            _extraColumns = (saved?['extraColumns'] as int? ?? 0).clamp(
+              0,
+              _maxGridSize - _baseColumns,
+            );
+            _extraRows = (saved?['extraRows'] as int? ?? 0).clamp(
+              0,
+              _maxGridSize - 10,
+            );
+          });
         }
       }
     } catch (_) {
@@ -605,12 +670,20 @@ class _RackFloorState extends State<_RackFloor> {
     Map<String, _FloorObject> next,
     String? selection, {
     bool undo = false,
+    int? extraColumns,
+    int? extraRows,
   }) async {
     if (_saving || _loading || !widget.canEdit) return;
-    final previous = _objects;
+    final previous = (
+      objects: _objects,
+      columns: _extraColumns,
+      rows: _extraRows,
+    );
     final oldSelection = _selection;
     setState(() {
       _objects = next;
+      _extraColumns = extraColumns ?? _extraColumns;
+      _extraRows = extraRows ?? _extraRows;
       _selection = selection;
       _saving = true;
     });
@@ -618,7 +691,11 @@ class _RackFloorState extends State<_RackFloor> {
       final prefs = await SharedPreferences.getInstance();
       if (!await prefs.setString(
         widget.storageKey,
-        jsonEncode(next.values.toList()),
+        jsonEncode({
+          'objects': next.values.toList(),
+          'extraColumns': _extraColumns,
+          'extraRows': _extraRows,
+        }),
       )) {
         throw StateError('Không lưu được bố trí.');
       }
@@ -626,7 +703,9 @@ class _RackFloorState extends State<_RackFloor> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _objects = previous;
+        _objects = previous.objects;
+        _extraColumns = previous.columns;
+        _extraRows = previous.rows;
         _selection = oldSelection;
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -662,7 +741,73 @@ class _RackFloorState extends State<_RackFloor> {
             y: position.dy,
           )
         : old.copyWith(x: position.dx, y: position.dy);
-    _save({..._objects, item.id: item}, item.id);
+    final current = _blockFor(item);
+    final block = _snap(
+      (position.dx * _columns - current.columns / 2).floor(),
+      (position.dy * _rows - current.rows / 2).floor(),
+      current.columns,
+      current.rows,
+    );
+    _updateBlock(item, block, layout);
+  }
+
+  _GridBlock _snap(int column, int row, int columns, int rows) {
+    final width = columns.clamp(1, _columns);
+    final height = rows.clamp(1, _rows);
+    return (
+      column: column.clamp(0, _columns - width),
+      row: row.clamp(0, _rows - height),
+      columns: width,
+      rows: height,
+    );
+  }
+
+  _GridBlock _blockFor(_FloorObject item) {
+    if (item.block case final block?) {
+      return _snap(block.column, block.row, block.columns, block.rows);
+    }
+    final (width, height) = item.kind.footprint;
+    final columns = ((item.rotation.isEven ? width : height) * item.width)
+        .round();
+    final rows = ((item.rotation.isEven ? height : width) * item.height)
+        .round();
+    return _snap(
+      (item.x * _baseColumns - columns / 2).round(),
+      (item.y * _baseRows - rows / 2).round(),
+      columns,
+      rows,
+    );
+  }
+
+  bool _overlaps(
+    _GridBlock block,
+    String id,
+    Map<String, _FloorObject> layout,
+  ) => layout.values.any((item) {
+    if (item.id == id) return false;
+    final other = _blockFor(item);
+    return block.column < other.column + other.columns &&
+        block.column + block.columns > other.column &&
+        block.row < other.row + other.rows &&
+        block.row + block.rows > other.row;
+  });
+
+  void _updateBlock(
+    _FloorObject item,
+    _GridBlock block,
+    Map<String, _FloorObject> layout, {
+    int? rotation,
+  }) {
+    if (_overlaps(block, item.id, layout)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vị trí này đã có khối khác.')),
+      );
+      return;
+    }
+    _save({
+      ..._objects,
+      item.id: item.copyWith(block: block, rotation: rotation),
+    }, item.id);
   }
 
   void _chooseTool(_FixtureKind? kind) {
@@ -670,6 +815,76 @@ class _RackFloorState extends State<_RackFloor> {
       _placement = kind;
       _placementPoint = null;
     });
+  }
+
+  void _zoomBy(double factor) {
+    final matrix = _viewport.value;
+    final scale = matrix.getMaxScaleOnAxis();
+    final adjustment = (scale * factor).clamp(.5, 2.5) / scale;
+    _viewport.value = Matrix4.copy(matrix)
+      ..scaleByDouble(adjustment, adjustment, 1, 1);
+  }
+
+  Future<void> _setGridSize() async {
+    final formKey = GlobalKey<FormState>();
+    var columns = _columns;
+    var rows = _rows;
+    final size = await showDialog<(int, int)>(
+      context: context,
+      builder: (context) {
+        Widget countField(String label, int min, ValueChanged<int> onSaved) =>
+            TextFormField(
+              initialValue: '$min',
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: label),
+              validator: (text) {
+                final value = int.tryParse(text?.trim() ?? '');
+                return value == null || value < min || value > _maxGridSize
+                    ? 'Nhập từ $min đến $_maxGridSize.'
+                    : null;
+              },
+              onSaved: (text) => onSaved(int.parse(text!.trim())),
+            );
+        return AlertDialog(
+          title: const Text('Kích thước lưới'),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  countField('Số cột', _columns, (value) => columns = value),
+                  const SizedBox(height: 12),
+                  countField('Số hàng', _rows, (value) => rows = value),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final form = formKey.currentState!;
+                if (!form.validate()) return;
+                form.save();
+                Navigator.pop(context, (columns, rows));
+              },
+              child: const Text('Áp dụng'),
+            ),
+          ],
+        );
+      },
+    );
+    if (!mounted || size == null) return;
+    await _save(
+      _objects,
+      _selection,
+      extraColumns: size.$1 - _baseColumns,
+      extraRows: size.$2 - _baseRows,
+    );
   }
 
   @override
@@ -701,9 +916,13 @@ class _RackFloorState extends State<_RackFloor> {
     final selected = layout[_selection];
     final canvas = LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final height = math.max(400.0, rackRows * 146.0);
-        final visibleHeight = math.min(height, 510.0);
+        final cellSize = (constraints.maxWidth / _baseColumns).clamp(
+          16.0,
+          80.0,
+        );
+        final width = _columns * cellSize;
+        final height = _rows * cellSize;
+        final visibleHeight = height.clamp(320.0, 540.0);
         return SizedBox(
           height: visibleHeight,
           child: DecoratedBox(
@@ -711,7 +930,7 @@ class _RackFloorState extends State<_RackFloor> {
             child: InteractiveViewer(
               transformationController: _viewport,
               constrained: false,
-              minScale: .75,
+              minScale: .50,
               maxScale: 2.5,
               child: SizedBox(
                 key: _floorKey,
@@ -735,10 +954,16 @@ class _RackFloorState extends State<_RackFloor> {
                     );
                   },
                   builder: (_, candidates, _) => CustomPaint(
-                    painter: _WarehouseStage(
-                      overhead: _overhead,
-                      placing: candidates.isNotEmpty || _placement != null,
-                    ),
+                    painter: editing || _overhead
+                        ? _WarehouseGrid(
+                            cellSize,
+                            colors.outlineVariant,
+                            colors.surfaceContainerLow,
+                          )
+                        : _WarehouseStage(
+                            overhead: false,
+                            placing: candidates.isNotEmpty,
+                          ),
                     child: Stack(
                       children: [
                         if (layout.isEmpty)
@@ -751,9 +976,9 @@ class _RackFloorState extends State<_RackFloor> {
                           ),
                         for (final obj in layout.values)
                           if (obj.id != _selection)
-                            _item(obj, width, height, editing, colors),
+                            _item(obj, cellSize, editing, colors, layout),
                         if (selected != null)
-                          _item(selected, width, height, editing, colors),
+                          _item(selected, cellSize, editing, colors, layout),
                         if (editing &&
                             _placement != null &&
                             _placementPoint != null)
@@ -763,11 +988,21 @@ class _RackFloorState extends State<_RackFloor> {
                               kind: _placement!,
                               x: _placementPoint!.dx,
                               y: _placementPoint!.dy,
+                              block: _snap(
+                                (_placementPoint!.dx * _columns -
+                                        _placement!.footprint.$1 / 2)
+                                    .floor(),
+                                (_placementPoint!.dy * _rows -
+                                        _placement!.footprint.$2 / 2)
+                                    .floor(),
+                                _placement!.footprint.$1,
+                                _placement!.footprint.$2,
+                              ),
                             ),
-                            width,
-                            height,
+                            cellSize,
                             false,
                             colors,
+                            layout,
                             ghost: true,
                           ),
                         if (editing && _placement != null)
@@ -894,13 +1129,12 @@ class _RackFloorState extends State<_RackFloor> {
                     IconButton(
                       tooltip: 'Phóng to',
                       icon: const Icon(Icons.zoom_in),
-                      onPressed: () {
-                        final matrix = _viewport.value;
-                        final zoom = matrix.getMaxScaleOnAxis();
-                        final factor = math.min(zoom * 1.25, 2.5) / zoom;
-                        _viewport.value = Matrix4.copy(matrix)
-                          ..scaleByDouble(factor, factor, 1, 1);
-                      },
+                      onPressed: () => _zoomBy(1.25),
+                    ),
+                    IconButton(
+                      tooltip: 'Thu nhỏ',
+                      icon: const Icon(Icons.zoom_out),
+                      onPressed: () => _zoomBy(.8),
                     ),
                     IconButton(
                       tooltip: 'Đặt lại khung nhìn',
@@ -913,7 +1147,16 @@ class _RackFloorState extends State<_RackFloor> {
                         icon: const Icon(Icons.undo),
                         onPressed: _saving || _undo == null
                             ? null
-                            : () => _save(_undo!, null, undo: true),
+                            : () {
+                                final last = _undo!;
+                                _save(
+                                  last.objects,
+                                  null,
+                                  undo: true,
+                                  extraColumns: last.columns,
+                                  extraRows: last.rows,
+                                );
+                              },
                       ),
                     if (widget.canEdit)
                       FilledButton.tonalIcon(
@@ -921,6 +1164,7 @@ class _RackFloorState extends State<_RackFloor> {
                             ? null
                             : () => setState(() {
                                 _editing = !editing;
+                                if (_editing) _overhead = true;
                                 _placement = null;
                                 _placementPoint = null;
                               }),
@@ -952,7 +1196,7 @@ class _RackFloorState extends State<_RackFloor> {
             const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: _inspector(selected),
+              child: _inspector(selected, layout),
             ),
           ],
         ],
@@ -970,15 +1214,37 @@ class _RackFloorState extends State<_RackFloor> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Expanded(
-                  child: Text(
-                    _placement == null
-                        ? 'Xây dựng · Kéo thả hoặc bấm để chọn vật thể'
-                        : 'Đang đặt ${_placement!.label.toLowerCase()} · Bấm vị trí trên sàn',
-                    style: theme.textTheme.labelLarge,
-                  ),
+                OutlinedButton.icon(
+                  onPressed: _saving ? null : _setGridSize,
+                  icon: const Icon(Icons.grid_on, size: 16),
+                  label: Text('$_columns × $_rows ô'),
+                ),
+                TextButton.icon(
+                  onPressed: _saving || _columns >= _maxGridSize
+                      ? null
+                      : () => _save(
+                          _objects,
+                          _selection,
+                          extraColumns: _extraColumns + 1,
+                        ),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Thêm cột'),
+                ),
+                TextButton.icon(
+                  onPressed: _saving || _rows >= _maxGridSize
+                      ? null
+                      : () => _save(
+                          _objects,
+                          _selection,
+                          extraRows: _rows - _baseRows + 1,
+                        ),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Thêm hàng'),
                 ),
                 if (_placement != null)
                   TextButton(
@@ -986,6 +1252,12 @@ class _RackFloorState extends State<_RackFloor> {
                     child: const Text('Hủy đặt'),
                   ),
               ],
+            ),
+            Text(
+              _placement == null
+                  ? 'Kéo khối vào lưới. Chọn khối rồi kéo góc để đổi kích thước.'
+                  : 'Chọn ô để đặt ${_placement!.label.toLowerCase()}.',
+              style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
             LayoutBuilder(
@@ -1063,13 +1335,23 @@ class _RackFloorState extends State<_RackFloor> {
     );
   }
 
-  Widget _inspector(_FloorObject item) {
-    void update(_FloorObject updated) =>
-        _save({..._objects, item.id: updated}, item.id);
+  Widget _inspector(_FloorObject item, Map<String, _FloorObject> layout) {
+    final block = _resizePreview ?? _blockFor(item);
+    void resize(int columns, int rows, {int? rotation}) {
+      _updateBlock(
+        item,
+        _snap(block.column, block.row, columns, rows),
+        layout,
+        rotation: rotation,
+      );
+    }
+
     return Wrap(
+      spacing: 4,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(item.stockRack ? 'Kệ ${item.id.substring(6)}' : item.kind.label),
+        Text('${block.columns} × ${block.rows} ô'),
         if (item.stockRack)
           TextButton.icon(
             onPressed: _saving
@@ -1083,43 +1365,39 @@ class _RackFloorState extends State<_RackFloor> {
           icon: const Icon(Icons.rotate_90_degrees_cw),
           onPressed: _saving
               ? null
-              : () => update(item.copyWith(rotation: (item.rotation + 1) % 4)),
+              : () => resize(
+                  block.rows,
+                  block.columns,
+                  rotation: (item.rotation + 1) % 4,
+                ),
         ),
         IconButton(
           tooltip: 'Giảm chiều ngang',
           icon: const Icon(Icons.keyboard_arrow_left),
           onPressed: _saving
               ? null
-              : () => update(
-                  item.copyWith(width: (item.width - .2).clamp(.6, 1.8)),
-                ),
+              : () => resize(block.columns - 1, block.rows),
         ),
         IconButton(
           tooltip: 'Tăng chiều ngang',
           icon: const Icon(Icons.keyboard_arrow_right),
           onPressed: _saving
               ? null
-              : () => update(
-                  item.copyWith(width: (item.width + .2).clamp(.6, 1.8)),
-                ),
+              : () => resize(block.columns + 1, block.rows),
         ),
         IconButton(
           tooltip: 'Giảm chiều dọc',
           icon: const Icon(Icons.keyboard_arrow_up),
           onPressed: _saving
               ? null
-              : () => update(
-                  item.copyWith(height: (item.height - .2).clamp(.6, 1.8)),
-                ),
+              : () => resize(block.columns, block.rows - 1),
         ),
         IconButton(
           tooltip: 'Tăng chiều dọc',
           icon: const Icon(Icons.keyboard_arrow_down),
           onPressed: _saving
               ? null
-              : () => update(
-                  item.copyWith(height: (item.height + .2).clamp(.6, 1.8)),
-                ),
+              : () => resize(block.columns, block.rows + 1),
         ),
         if (!item.stockRack || !widget.racks.containsKey(item.id.substring(6)))
           IconButton(
@@ -1135,35 +1413,16 @@ class _RackFloorState extends State<_RackFloor> {
 
   Widget _item(
     _FloorObject item,
-    double width,
-    double height,
+    double cellSize,
     bool editing,
-    ColorScheme colors, {
+    ColorScheme colors,
+    Map<String, _FloorObject> layout, {
     bool ghost = false,
   }) {
     final rack = item.stockRack ? widget.racks[item.id.substring(6)] : null;
-    final viewScale = (width / 950).clamp(.52, 1.0);
-    final itemWidth = math.min(width, 132 * viewScale * item.width);
-    final shapeHeight = switch (item.kind) {
-      _FixtureKind.aisle => .70,
-      _FixtureKind.wall => .56,
-      _FixtureKind.door => .82,
-      _ => 1.0,
-    };
-    final itemHeight = math.min(
-      height,
-      110 * viewScale * item.height * shapeHeight,
-    );
-    final horizontal = (item.rotation.isEven ? itemWidth : itemHeight).clamp(
-      0.0,
-      width,
-    );
-    final vertical = item.rotation.isEven ? itemHeight : itemWidth;
-    final left = (item.x * width - horizontal / 2).clamp(
-      0.0,
-      math.max(0.0, width - horizontal),
-    );
-    final top = (item.y * height - vertical / 2).clamp(0.0, height - vertical);
+    final selected = editing && _selection == item.id;
+    final block = (selected ? _resizePreview : null) ?? _blockFor(item);
+    final invalid = ghost && _overlaps(block, item.id, layout);
     final angle = (_angle + item.rotation * 2) % 8;
     final card = rack == null
         ? _FixtureTile(
@@ -1177,44 +1436,122 @@ class _RackFloorState extends State<_RackFloor> {
           )
         : _RackPerspective(angle: angle, overhead: _overhead, child: rack);
     final visual = SizedBox(
-      width: horizontal,
-      height: vertical,
+      width: block.columns * cellSize,
+      height: block.rows * cellSize,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          border: editing && _selection == item.id
-              ? Border.all(color: colors.primary, width: 2)
+          border: selected || invalid
+              ? Border.all(
+                  color: invalid ? colors.error : colors.primary,
+                  width: 2,
+                )
               : null,
           borderRadius: BorderRadius.circular(12),
         ),
         child: card,
       ),
     );
-    return Positioned(
-      left: left.toDouble(),
-      top: top,
-      child: ghost
-          ? Opacity(opacity: .60, child: visual)
-          : editing
-          ? Draggable<_SceneDrag>(
-              data: (id: item.id, kind: null),
-              dragAnchorStrategy: pointerDragAnchorStrategy,
-              feedback: Material(
-                color: Colors.transparent,
+    final draggable = ghost
+        ? Opacity(opacity: .60, child: visual)
+        : editing
+        ? Draggable<_SceneDrag>(
+            data: (id: item.id, kind: null),
+            dragAnchorStrategy: pointerDragAnchorStrategy,
+            feedback: Material(
+              color: Colors.transparent,
+              child: IgnorePointer(child: visual),
+            ),
+            childWhenDragging: Opacity(opacity: .30, child: visual),
+            child: Semantics(
+              button: true,
+              label: item.stockRack
+                  ? 'Chọn kệ ${item.id.substring(6)}'
+                  : item.kind.label,
+              child: InkWell(
+                onTap: () => setState(() => _selection = item.id),
                 child: IgnorePointer(child: visual),
               ),
-              childWhenDragging: Opacity(opacity: .30, child: visual),
-              child: Semantics(
-                button: true,
-                label: item.stockRack
-                    ? 'Chọn kệ ${item.id.substring(6)}'
-                    : item.kind.label,
-                child: InkWell(
-                  onTap: () => setState(() => _selection = item.id),
-                  child: IgnorePointer(child: visual),
+            ),
+          )
+        : visual;
+    return Positioned(
+      left: block.column * cellSize,
+      top: block.row * cellSize,
+      child: selected
+          ? Stack(
+              children: [
+                draggable,
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: _resizeHandle(item, block, cellSize, colors, layout),
                 ),
-              ),
+              ],
             )
-          : visual,
+          : draggable,
+    );
+  }
+
+  Widget _resizeHandle(
+    _FloorObject item,
+    _GridBlock block,
+    double cellSize,
+    ColorScheme colors,
+    Map<String, _FloorObject> layout,
+  ) {
+    return Tooltip(
+      message: 'Kéo để đổi kích thước theo ô',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.resizeDownRight,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onPanStart: _saving
+              ? null
+              : (_) {
+                  _resizeStart = block;
+                  _resizeDelta = Offset.zero;
+                },
+          onPanUpdate: (details) {
+            final start = _resizeStart;
+            if (start == null) return;
+            _resizeDelta += details.delta;
+            final columns =
+                (start.columns + (_resizeDelta.dx / cellSize).round()).clamp(
+                  1,
+                  _columns - start.column,
+                );
+            final rows = (start.rows + (_resizeDelta.dy / cellSize).round())
+                .clamp(1, _rows - start.row);
+            final next = _snap(start.column, start.row, columns, rows);
+            if (!_overlaps(next, item.id, layout)) {
+              setState(() => _resizePreview = next);
+            }
+          },
+          onPanCancel: () => setState(() {
+            _resizeStart = null;
+            _resizePreview = null;
+          }),
+          onPanEnd: (_) {
+            final next = _resizePreview;
+            setState(() {
+              _resizeStart = null;
+              _resizePreview = null;
+            });
+            if (next != null) _updateBlock(item, next, layout);
+          },
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: colors.primary,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(6),
+              ),
+            ),
+            child: Icon(Icons.open_in_full, size: 14, color: colors.onPrimary),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1394,6 +1731,26 @@ class _FixtureModel extends CustomPainter {
         box(-25, -5, 0, 50, 10, 3, steel);
         box(-24, -3, 3, 48, 6, 19, slate);
         box(-24, -3, 22, 48, 6, 2, const Color(0xFFBDC9CB));
+      case _FixtureKind.pallet:
+        box(-22, -12, 0, 44, 24, 4, amber);
+        box(-18, -9, 4, 36, 18, 11, const Color(0xFFD18B52));
+      case _FixtureKind.coldStorage:
+        box(-21, -11, 0, 42, 22, 24, const Color(0xFF6CA4CE));
+        box(-18, -12, 3, 16, 2, 17, const Color(0xFFD9E9F3));
+        box(1, -12, 3, 16, 2, 17, const Color(0xFFD9E9F3));
+      case _FixtureKind.display:
+        box(-23, -9, 0, 46, 18, 9, slate);
+        box(-24, -10, 9, 48, 20, 3, const Color(0xFFBD946E));
+        box(-18, -6, 12, 12, 10, 6, amber);
+        box(4, -6, 12, 12, 10, 6, steel);
+      case _FixtureKind.bulk:
+        box(-25, -12, 0, 50, 24, 3, slate);
+        box(-22, -10, 3, 21, 20, 15, amber);
+        box(2, -9, 3, 22, 18, 10, const Color(0xFFD18B52));
+      case _FixtureKind.dispatch:
+        box(-23, -11, 0, 46, 22, 3, slate);
+        box(-21, -8, 3, 25, 16, 12, steel);
+        box(7, -8, 3, 13, 16, 8, const Color(0xFF83B58D));
       case _FixtureKind.rack || _FixtureKind.aisle:
         return;
     }
@@ -1473,6 +1830,15 @@ class _FixtureShape extends CustomPainter {
           canvas.drawRect(rect, stroke);
           canvas.drawLine(Offset(x, 0), Offset(x + 12, 0), stroke);
         }
+      case _FixtureKind.pallet ||
+          _FixtureKind.coldStorage ||
+          _FixtureKind.display ||
+          _FixtureKind.bulk ||
+          _FixtureKind.dispatch:
+        const rect = Rect.fromLTWH(-22, -11, 44, 22);
+        canvas.drawRect(rect, fill);
+        canvas.drawRect(rect, stroke);
+        canvas.drawLine(const Offset(0, -11), const Offset(0, 11), stroke);
       case _FixtureKind.rack:
         break;
     }
@@ -1483,6 +1849,36 @@ class _FixtureShape extends CustomPainter {
       oldDelegate.kind != kind ||
       oldDelegate.color != color ||
       oldDelegate.angle != angle;
+}
+
+class _WarehouseGrid extends CustomPainter {
+  const _WarehouseGrid(this.cellSize, this.line, this.background);
+
+  final double cellSize;
+  final Color line;
+  final Color background;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bounds = Offset.zero & size;
+    canvas.drawRect(bounds, Paint()..color = background);
+    final paint = Paint()
+      ..color = line.withValues(alpha: .78)
+      ..strokeWidth = 1;
+    for (double x = 0; x < size.width; x += cellSize) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += cellSize) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+    canvas.drawRect(bounds, paint..style = PaintingStyle.stroke);
+  }
+
+  @override
+  bool shouldRepaint(_WarehouseGrid oldDelegate) =>
+      oldDelegate.cellSize != cellSize ||
+      oldDelegate.line != line ||
+      oldDelegate.background != background;
 }
 
 class _WarehouseStage extends CustomPainter {

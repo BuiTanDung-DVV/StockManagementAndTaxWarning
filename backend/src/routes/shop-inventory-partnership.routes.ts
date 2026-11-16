@@ -29,8 +29,10 @@ router.get(path, async (req: AuthRequest, res: Response, next: NextFunction) => 
 
 router.post(path, async (req: AuthRequest, res: Response, next: NextFunction) => {
     const code = typeof req.body?.shopCode === 'string' ? req.body.shopCode.trim().toUpperCase() : '';
-    if (!/^[A-Z0-9]{6}$/.test(code)) {
-        return res.status(400).json({ success: false, message: 'Nhập mã cửa hàng gồm 6 ký tự.' });
+    if (!/^[A-Z0-9]{4,20}$/.test(code)) {
+        return res.status(400).json({
+            success: false, message: 'Nhập mã cửa hàng từ 4 đến 20 ký tự, chỉ gồm chữ và số.',
+        });
     }
 
     try {
