@@ -147,3 +147,38 @@ Trên môi trường production, trang Web sử dụng cơ chế rewrite `/api/:
    - Đặt `OTP_DEBUG_RESPONSE=false` và khai báo `ALLOWED_ORIGINS` bao gồm domain Web production.
 3. **Triển khai Flutter Web**: Tạo project Vercel tại thư mục gốc repo. File [vercel.json](vercel.json) sẽ gọi [build_vercel.sh](build_vercel.sh) để build bản `--release` vào `build/web` và tự động chạy `scripts/verify-web-auth-build.cjs`, `scripts/verify-web-plugin-build.cjs` để kiểm tra gói build. Nếu đổi domain Backend API, cập nhật đích rewrite `/api/:match*` trong [vercel.json](vercel.json) hoặc cấu hình biến `API_URL`.
 4. **Cấu hình Google Sign-In (nếu dùng)**: Đặt `GOOGLE_WEB_CLIENT_ID` cho bản Web, thêm client ID vào `GOOGLE_CLIENT_IDS` ở Backend và khai báo domain `https://smartstock-tax.vercel.app` vào Authorized JavaScript origins trên Google OAuth Console.
+
+---
+
+## Tài khoản kiểm thử (Demo)
+
+Bạn có thể đăng nhập trực tiếp trên **SmartStock Web** (`https://smartstock-tax.vercel.app/`) hoặc trên **App Android** bằng bộ tài khoản mẫu dưới đây (mật khẩu mặc định chung: `123456`):
+
+### 1. Tài khoản quản lý chung (Toàn hệ thống)
+
+Có quyền truy cập cả hai cửa hàng mẫu (**Vật liệu xây dựng** và **Phân bón & Vật tư Nông nghiệp**), xem Dashboard tổng hợp (*All Shops*) và quản lý nhân sự.
+
+| Email đăng nhập | Họ tên | Vai trò | Mật khẩu |
+| --- | --- | --- | --- |
+| `admin@kientao.com` | Nguyễn Văn Chủ | Owner (Chủ sở hữu) | `123456` |
+| `manager@kientao.com` | Trần Quản Lý Chung | Quản lý hệ thống | `123456` |
+
+### 2. Cửa hàng Vật liệu xây dựng
+
+Các tài khoản nhân viên chỉ truy cập dữ liệu và chức năng được phân quyền tại cửa hàng **Vật liệu xây dựng**.
+
+| Email đăng nhập | Họ tên | Vai trò | Mật khẩu |
+| --- | --- | --- | --- |
+| `sales@vlxd.com` | Lê Bán Hàng VLXD | Bán hàng (Sales) | `123456` |
+| `warehouse@vlxd.com` | Phạm Thủ Kho VLXD | Thủ kho (Warehouse) | `123456` |
+| `accountant@vlxd.com` | Hoàng Kế Toán VLXD | Kế toán (Accountant) | `123456` |
+
+### 3. Cửa hàng Phân bón & Vật tư Nông nghiệp
+
+Các tài khoản nhân viên chỉ truy cập dữ liệu và chức năng được phân quyền tại cửa hàng **Phân bón & Vật tư Nông nghiệp**.
+
+| Email đăng nhập | Họ tên | Vai trò | Mật khẩu |
+| --- | --- | --- | --- |
+| `sales@nongnghiep.com` | Đào Bán Hàng Phân Bón | Bán hàng (Sales) | `123456` |
+| `warehouse@nongnghiep.com` | Lý Thủ Kho Phân Bón | Thủ kho (Warehouse) | `123456` |
+| `accountant@nongnghiep.com` | Ngô Kế Toán Phân Bón | Kế toán (Accountant) | `123456` |
