@@ -169,6 +169,12 @@ final _financeToolGroups = <_FinanceToolGroupDefinition>[
         assetPath: AppAssets.financeCalculator,
       ),
       _FinanceToolDefinition(
+        title: 'Ước tính từ dữ liệu cửa hàng',
+        description: 'Xem số thuế theo kỳ, căn cứ và nguồn tỷ lệ áp dụng.',
+        route: '/tax-estimate',
+        assetPath: AppAssets.financeTaxDeclaration,
+      ),
+      _FinanceToolDefinition(
         title: 'Theo dõi nghĩa vụ thuế',
         description: 'Theo dõi kỳ, hạn nộp và trạng thái hoàn thành.',
         route: '/tax-obligations',

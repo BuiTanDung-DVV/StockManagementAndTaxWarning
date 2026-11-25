@@ -382,7 +382,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           // Inventory
           GoRoute(
             path: '/inventory/loans',
-            builder: (_, _) => const InventoryLoansScreen(),
+            builder: (_, state) => InventoryLoansScreen(
+              partner: state.uri.queryParameters['partner'],
+            ),
           ),
           GoRoute(
             path: '/inventory/shelves',

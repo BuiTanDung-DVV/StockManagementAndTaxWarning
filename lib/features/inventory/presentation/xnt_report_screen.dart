@@ -8,7 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/custom_date_range_picker.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../providers/inventory_provider.dart';
 import '../../../core/providers/reporting_period_provider.dart';
 import '../../../core/utils/excel_export_service.dart';
@@ -190,11 +190,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leading: const AppPageBackLeading(),
         title: Text(
           'Báo cáo XNT Kho',
           style: GoogleFonts.manrope(

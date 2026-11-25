@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/password_visibility_button.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
@@ -160,9 +160,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         backgroundColor: Colors.transparent,
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(onPressed: context.pop)
-            : null,
+        leading: const AppPageBackLeading(),
       ),
       body: SafeArea(
         child: Center(

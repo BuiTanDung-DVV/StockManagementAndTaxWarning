@@ -5,8 +5,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_animations.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../settings/providers/system_provider.dart';
 import '../../settings/providers/tax_config_provider.dart';
 import '../services/tax_declaration_pdf_service.dart';
@@ -30,8 +31,15 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
   bool _isExporting = false;
   Map<String, dynamic>? _reportData;
   String? _errorMessage;
+  int _estimateRequest = 0;
+
+  Map? get _estimatePolicy {
+    final policy = _reportData?['policy'];
+    return policy is Map ? policy : null;
+  }
 
   Future<void> _fetchEstimate() async {
+    final request = ++_estimateRequest;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -43,10 +51,10 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
         _selectedPeriod,
         _selectedYear,
       );
-      if (!mounted) return;
+      if (!mounted || request != _estimateRequest) return;
       setState(() => _reportData = data);
     } catch (e) {
-      if (mounted) {
+      if (mounted && request == _estimateRequest) {
         setState(() {
           _reportData = null;
           _errorMessage =
@@ -55,7 +63,7 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
         ToastService.showError('Không thể tải báo cáo thuế kỳ đã chọn.');
       }
     } finally {
-      if (mounted) {
+      if (mounted && request == _estimateRequest) {
         setState(() {
           _isLoading = false;
         });
@@ -119,11 +127,18 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
           period: _selectedPeriod,
           year: _selectedYear,
           revenue: totalRevenue,
-          vatRate: config.effectiveVatRate,
-          pitRate: config.effectivePitRate,
+          vatRate:
+              (_reportData?['vatRate'] as num?)?.toDouble() ??
+              config.effectiveVatRate,
+          pitRate:
+              (_reportData?['pitRate'] as num?)?.toDouble() ??
+              config.effectivePitRate,
           vatAmount: vatOwed,
           pitAmount: pitOwed,
-          policySourceCode: config.policySourceCode ?? 'TT 40/2021/TT-BTC',
+          policySourceCode:
+              _estimatePolicy?['sourceCode']?.toString() ??
+              config.policySourceCode ??
+              'Chưa có căn cứ',
           isExempt: isExempt,
         );
 
@@ -173,11 +188,7 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
         appBar: AppBar(
           automaticallyImplyLeading: false,
           leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-          leading: Navigator.of(context).canPop()
-              ? AppNavigationBackLeading(
-                  onPressed: () => Navigator.of(context).pop(),
-                )
-              : null,
+          leading: const AppPageBackLeading(),
           title: const Text('Ước tính & xuất thuế (HTKK)'),
         ),
         body: Center(
@@ -197,6 +208,18 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
       );
     }
     final fiscalYear = config.fiscalYear.toString();
+    final estimatePolicy = _estimatePolicy;
+    final policySource =
+        estimatePolicy?['sourceCode']?.toString() ?? config.policySourceCode;
+    final sourceUri = Uri.tryParse(
+      estimatePolicy?['sourceUrl']?.toString() ?? '',
+    );
+    final linkAvailable =
+        sourceUri != null &&
+        sourceUri.scheme == 'https' &&
+        sourceUri.hasAuthority;
+    final policyFallback = _reportData?['policyUsedFallback'] == true;
+    final rateFallback = _reportData?['rateUsedFallback'] == true;
     if (!_didStart) {
       _didStart = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -211,11 +234,7 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leading: const AppPageBackLeading(),
         title: const Text('Ước Tính & Xuất Thuế (HTKK)'),
       ),
       body: RefreshIndicator(
@@ -305,14 +324,51 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
                   : _reportData != null
                   ? Column(
                       children: [
+                        if (policyFallback || rateFallback)
+                          ListTile(
+                            leading: const AppIcon(Icons.info_outline),
+                            title: const Text(
+                              'Đang dùng cấu hình thuế dự phòng',
+                            ),
+                            subtitle: Text(
+                              [
+                                if (policyFallback)
+                                  'Ngưỡng theo bộ chính sách dự phòng.',
+                                if (rateFallback)
+                                  'Có tỷ lệ theo ngành được lấy từ bộ mặc định.',
+                              ].join(' '),
+                            ),
+                          ),
+                        if (policySource != null)
+                          ListTile(
+                            title: Text('Căn cứ ước tính: $policySource'),
+                            trailing: linkAvailable
+                                ? const AppIcon(Icons.open_in_new, size: 18)
+                                : null,
+                            subtitle: Text(
+                              'Kỳ ${_reportData!['period'] ?? _selectedPeriod}/${_reportData!['year'] ?? _selectedYear}'
+                              '${estimatePolicy?['effectiveFrom'] != null ? ' · Hiệu lực từ ${estimatePolicy!['effectiveFrom']}' : ''}',
+                            ),
+                            onTap: linkAvailable
+                                ? () async {
+                                    if (!await launchUrl(sourceUri)) {
+                                      ToastService.showError(
+                                        'Không thể mở văn bản thuế.',
+                                      );
+                                    }
+                                  }
+                                : null,
+                          ),
                         TaxWarningWidget(
                           totalRevenue: asDouble(_reportData!['totalRevenue']),
                           vatOwed: asDouble(_reportData!['vatOwed']),
                           pitOwed: asDouble(_reportData!['pitOwed']),
-                          exemptionThreshold: config.thresholds?.tier4 ?? 0.0,
-                          policySourceCode:
-                              config.policySourceCode ??
-                              'văn bản đang hiệu lực',
+                          exemptionThreshold:
+                              (estimatePolicy?['taxExemptionThreshold'] as num?)
+                                  ?.toDouble() ??
+                              config.thresholds?.tier4 ??
+                              0.0,
+                          policySourceCode: policySource ?? 'cấu hình hiện tại',
                         ),
                         const SizedBox(height: 16),
                         Container(

@@ -1,7 +1,6 @@
 import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/assets/app_assets.dart';
@@ -9,7 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/tag_provider.dart';
 import '../providers/product_provider.dart';
@@ -293,7 +292,10 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
 
     if (!isOwner) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Cấu hình bộ lọc và nhãn')),
+        appBar: AppBar(
+          leading: const AppPageBackLeading(),
+          title: const Text('Cấu hình bộ lọc và nhãn'),
+        ),
         body: Center(
           child: Text(
             'Bạn không có quyền truy cập tính năng này',
@@ -308,9 +310,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(onPressed: context.pop)
-            : null,
+        leading: const AppPageBackLeading(),
         title: Text(
           'Cấu hình bộ lọc và nhãn',
           style: GoogleFonts.manrope(

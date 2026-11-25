@@ -11,7 +11,7 @@ import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../providers/supplier_provider.dart';
 import 'supplier_form_screen.dart';
 import 'supplier_payables_section.dart';
@@ -59,11 +59,7 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leading: const AppPageBackLeading(),
         title: Text(
           'Nhà cung cấp',
           style: GoogleFonts.manrope(

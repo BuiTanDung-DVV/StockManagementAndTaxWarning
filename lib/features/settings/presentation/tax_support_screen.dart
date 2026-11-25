@@ -1,6 +1,6 @@
 import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -34,11 +34,7 @@ class TaxSupportScreen extends ConsumerWidget {
         appBar: AppBar(
           automaticallyImplyLeading: false,
           leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-          leading: Navigator.of(context).canPop()
-              ? AppNavigationBackLeading(
-                  onPressed: () => Navigator.of(context).pop(),
-                )
-              : null,
+          leading: const AppPageBackLeading(),
           title: const Text('Hỗ trợ Thuế'),
         ),
         body: Center(
@@ -79,11 +75,7 @@ class TaxSupportScreen extends ConsumerWidget {
         appBar: AppBar(
           automaticallyImplyLeading: false,
           leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-          leading: Navigator.of(context).canPop()
-              ? AppNavigationBackLeading(
-                  onPressed: () => Navigator.of(context).pop(),
-                )
-              : null,
+          leading: const AppPageBackLeading(),
           title: const Text('Hỗ trợ Thuế'),
         ),
         body: Center(
@@ -120,11 +112,7 @@ class TaxSupportScreen extends ConsumerWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leading: const AppPageBackLeading(),
         title: const Text('Hỗ trợ Thuế'),
       ),
       body: RefreshIndicator(

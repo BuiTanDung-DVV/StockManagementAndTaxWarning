@@ -65,6 +65,7 @@ flutter:
     - assets/fonts/
     - assets/templates/
     - assets/audio/
+    - assets/warehouse/
 
 flutter_launcher_icons:
   android: true

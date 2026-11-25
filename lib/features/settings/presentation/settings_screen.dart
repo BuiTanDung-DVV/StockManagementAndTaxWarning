@@ -54,6 +54,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  _SettingsGroup? _selectedGroup;
   String _searchQuery = '';
   late final TextEditingController _searchController;
 
@@ -96,6 +97,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     final sections = <_SettingsSectionData>[
       _SettingsSectionData(
+        group: _SettingsGroup.account,
         title: tr.settings.sectionAccountSecurity,
         icon: Icons.shield_outlined,
         iconColor: const Color(0xFF2563EB),
@@ -126,108 +128,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
         ],
       ),
-      if (canManageStaff)
-        _SettingsSectionData(
-          title: tr.settings.sectionStaffRoles,
-          icon: Icons.badge_outlined,
-          iconColor: const Color(0xFFD97706),
-          entries: [
-            _SettingsEntry(
-              label: tr.settings.staffList,
-              description: tr.settings.staffListDesc,
-              icon: Icons.people_alt_outlined,
-              iconColor: const Color(0xFFD97706),
-              onTap: () => context.push('/staff'),
-            ),
-            _SettingsEntry(
-              label: tr.settings.rolesAndPermissions,
-              description: tr.settings.rolesAndPermissionsDesc,
-              icon: Icons.admin_panel_settings_outlined,
-              iconColor: const Color(0xFFF59E0B),
-              onTap: () => context.push('/roles'),
-            ),
-          ],
-        ),
       _SettingsSectionData(
-        title: tr.settings.sectionGoodsLogistics,
-        icon: Icons.inventory_2_outlined,
-        iconColor: const Color(0xFF0D9488),
-        entries: [
-          if (canManageProducts)
-            _SettingsEntry(
-              label: tr.settings.productCategories,
-              description: tr.settings.productCategoriesDesc,
-              icon: Icons.category_outlined,
-              iconColor: const Color(0xFF0D9488),
-              onTap: () => context.push('/settings/product-categories'),
-            ),
-          if (canManageSettings)
-            _SettingsEntry(
-              label: tr.settings.activityLogs,
-              description: tr.settings.activityLogsDesc,
-              icon: Icons.history_rounded,
-              iconColor: const Color(0xFF14B8A6),
-              onTap: () => context.push('/activity-logs'),
-            ),
-          if (canManageSettings)
-            _SettingsEntry(
-              label: tr.settings.costingMethod,
-              description: costing.isLoading
-                  ? tr.settings.costingMethodLoading
-                  : costing.errorMessage != null || !costing.hasData
-                  ? tr.settings.costingMethodError
-                  : costing.method == 'FIFO'
-                  ? tr.settings.costingMethodFifo
-                  : tr.settings.costingMethodAvg,
-              icon: Icons.calculate_outlined,
-              iconColor: const Color(0xFF0284C7),
-              onTap: costing.isLoading || !costing.hasData
-                  ? null
-                  : () => _showCostingMethodPicker(context),
-            ),
-          if (canManageProducts)
-            _SettingsEntry(
-              label: tr.settings.minStockAlert,
-              description: tr.settings.minStockAlertDesc,
-              icon: Icons.warning_amber_rounded,
-              iconColor: const Color(0xFFE11D48),
-              onTap: () => context.push('/products/min-stock'),
-            ),
-        ],
-      ),
-      if (!shopState.isAllShops &&
-          (shopState.isOwner || shopState.hasPermission('inventory')))
-        _SettingsSectionData(
-          title: 'Kho và điều chuyển',
-          icon: Icons.warehouse_outlined,
-          iconColor: const Color(0xFF0F766E),
-          entries: [
-            _SettingsEntry(
-              label: 'Sơ đồ kệ',
-              description: 'Bố trí kệ và tra cứu vị trí sản phẩm.',
-              icon: Icons.view_in_ar_outlined,
-              iconColor: const Color(0xFF0F766E),
-              onTap: () => context.push('/inventory/shelves'),
-            ),
-            _SettingsEntry(
-              label: 'Phiếu mượn hàng',
-              description:
-                  'Theo dõi hàng mượn, hàng đang giao và hàng phải hoàn.',
-              icon: Icons.swap_horiz,
-              iconColor: const Color(0xFF0F766E),
-              onTap: () => context.push('/inventory/loans'),
-            ),
-            if (shopState.isOwner)
-              _SettingsEntry(
-                label: 'Đối tác kho',
-                description: 'Quản lý liên kết với cửa hàng cho mượn hàng.',
-                icon: Icons.handshake_outlined,
-                iconColor: const Color(0xFF0F766E),
-                onTap: () => context.push('/inventory/partner-shops'),
-              ),
-          ],
-        ),
-      _SettingsSectionData(
+        group: _SettingsGroup.store,
         title: tr.settings.sectionShopPayment,
         icon: Icons.storefront_rounded,
         iconColor: const Color(0xFF059669),
@@ -266,7 +168,106 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
         ],
       ),
+      if (canManageStaff)
+        _SettingsSectionData(
+          group: _SettingsGroup.staff,
+          title: tr.settings.sectionStaffRoles,
+          icon: Icons.badge_outlined,
+          iconColor: const Color(0xFFD97706),
+          entries: [
+            _SettingsEntry(
+              label: tr.settings.staffList,
+              description: tr.settings.staffListDesc,
+              icon: Icons.people_alt_outlined,
+              iconColor: const Color(0xFFD97706),
+              onTap: () => context.push('/staff'),
+            ),
+            _SettingsEntry(
+              label: tr.settings.rolesAndPermissions,
+              description: tr.settings.rolesAndPermissionsDesc,
+              icon: Icons.admin_panel_settings_outlined,
+              iconColor: const Color(0xFFF59E0B),
+              onTap: () => context.push('/roles'),
+            ),
+          ],
+        ),
       _SettingsSectionData(
+        group: _SettingsGroup.inventory,
+        title: tr.settings.sectionGoodsLogistics,
+        icon: Icons.inventory_2_outlined,
+        iconColor: const Color(0xFF0D9488),
+        entries: [
+          if (canManageProducts)
+            _SettingsEntry(
+              label: tr.settings.productCategories,
+              description: tr.settings.productCategoriesDesc,
+              icon: Icons.category_outlined,
+              iconColor: const Color(0xFF0D9488),
+              onTap: () => context.push('/settings/product-categories'),
+            ),
+          if (canManageSettings)
+            _SettingsEntry(
+              label: tr.settings.costingMethod,
+              loading: costing.isLoading,
+              description: costing.isLoading
+                  ? tr.settings.costingMethodLoading
+                  : costing.errorMessage != null || !costing.hasData
+                  ? tr.settings.costingMethodError
+                  : costing.method == 'FIFO'
+                  ? tr.settings.costingMethodFifo
+                  : tr.settings.costingMethodAvg,
+              icon: Icons.calculate_outlined,
+              iconColor: const Color(0xFF0284C7),
+              onTap: costing.isLoading || !costing.hasData
+                  ? null
+                  : () => _showCostingMethodPicker(context),
+            ),
+          if (canManageProducts)
+            _SettingsEntry(
+              label: tr.settings.minStockAlert,
+              description: tr.settings.minStockAlertDesc,
+              icon: Icons.warning_amber_rounded,
+              iconColor: const Color(0xFFE11D48),
+              onTap: () => context.push('/products/min-stock'),
+            ),
+          if (!shopState.isAllShops &&
+              (shopState.isOwner || shopState.hasPermission('inventory'))) ...[
+            _SettingsEntry(
+              warehouseTool: true,
+              label: context.isEnglish ? 'Shelf layout' : 'Sơ đồ kệ',
+              description: context.isEnglish
+                  ? 'Arrange shelves and locate products.'
+                  : 'Bố trí kệ và tra cứu vị trí sản phẩm.',
+              icon: Icons.shelves,
+              iconColor: const Color(0xFF0F766E),
+              onTap: () => context.push('/inventory/shelves'),
+            ),
+            if (shopState.isOwner)
+              _SettingsEntry(
+                warehouseTool: true,
+                label: context.isEnglish ? 'Warehouse partners' : 'Đối tác kho',
+                description: context.isEnglish
+                    ? 'Manage partnerships with other stores.'
+                    : 'Quản lý liên kết với cửa hàng cho mượn hàng.',
+                icon: Icons.handshake_outlined,
+                iconColor: const Color(0xFF0F766E),
+                onTap: () => context.push('/inventory/partner-shops'),
+              ),
+            _SettingsEntry(
+              warehouseTool: true,
+              label: context.isEnglish ? 'Stock loans' : 'Phiếu mượn hàng',
+              description: context.isEnglish
+                  ? 'Track shipments, borrowed stock and returns.'
+                  : 'Theo dõi hàng mượn, hàng đang giao và hàng phải hoàn.',
+              icon: Icons.swap_horiz,
+              iconColor: const Color(0xFF0F766E),
+              onTap: () => context.push('/inventory/loans'),
+            ),
+          ],
+        ],
+      ),
+      _SettingsSectionData(
+        group: _SettingsGroup.tax,
         title: tr.settings.sectionTaxSupport,
         icon: Icons.account_balance_outlined,
         iconColor: const Color(0xFF7C3AED),
@@ -315,6 +316,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
       _SettingsSectionData(
+        group: _SettingsGroup.system,
         title: tr.settings.sectionSystemInterface,
         icon: Icons.settings_suggest_outlined,
         iconColor: const Color(0xFF4F46E5),
@@ -347,6 +349,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             iconColor: brandColor.color,
             onTap: () => ThemeAppearanceModal.show(context),
           ),
+          if (canManageSettings)
+            _SettingsEntry(
+              label: tr.settings.activityLogs,
+              description: tr.settings.activityLogsDesc,
+              icon: Icons.history_rounded,
+              iconColor: const Color(0xFF14B8A6),
+              onTap: () => context.push('/activity-logs'),
+            ),
           if (shopState.isOwner)
             _SettingsEntry(
               label: tr.settings.backupRestore,
@@ -370,12 +380,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final filteredSections = sections
         .map(
           (section) => _SettingsSectionData(
+            group: section.group,
             title: section.title,
             icon: section.icon,
             iconColor: section.iconColor,
             entries: section.entries.where((entry) {
               if (query.isEmpty) return true;
-              return foldSearchText(entry.label).contains(query) ||
+              return (entry.warehouseTool &&
+                      foldSearchText(
+                        context.isEnglish ? 'Warehouse tools' : 'Công cụ kho',
+                      ).contains(query)) ||
+                  foldSearchText(entry.label).contains(query) ||
                   foldSearchText(entry.description).contains(query) ||
                   foldSearchText(section.title).contains(query);
             }).toList(),
@@ -384,6 +399,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         .where((section) => section.entries.isNotEmpty)
         .toList();
 
+    Widget detail(_SettingsSectionData section) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (section.group == _SettingsGroup.account && query.isEmpty) ...[
+          _SettingsProfileCard(
+            shopAsync: shopAsync,
+            user: auth.user,
+            shopState: shopState,
+            onOpenProfile: () => context.push('/profile'),
+            onSwitchShop: shopState.userShops.length > 1
+                ? () => _showShopSwitcher(context, shopState)
+                : null,
+            onRetry: shopAsync != null
+                ? () => ref.refresh(shopProfileProvider)
+                : null,
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+        _SettingsSection(section: section),
+      ],
+    );
     return Scaffold(
       backgroundColor: colors.bg,
       body: RefreshIndicator(
@@ -409,18 +445,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   dense: true,
                   action: featureGuideButton(context, 'settings'),
                   compactAction: featureGuideButton(context, 'settings'),
-                ),
-                _SettingsProfileCard(
-                  shopAsync: shopAsync,
-                  user: auth.user,
-                  shopState: shopState,
-                  onOpenProfile: () => context.push('/profile'),
-                  onSwitchShop: shopState.userShops.length > 1
-                      ? () => _showShopSwitcher(context, shopState)
-                      : null,
-                  onRetry: shopAsync != null
-                      ? () => ref.refresh(shopProfileProvider)
-                      : null,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Container(
@@ -549,16 +573,83 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ),
                   )
+                else if (query.isNotEmpty)
+                  for (final section in filteredSections)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                      child: _SettingsSection(section: section),
+                    )
                 else
-                  AppFillGrid(
-                    minItemWidth: 420,
-                    maxColumns: 2,
-                    spacing: AppSpacing.md,
-                    runSpacing: AppSpacing.md,
-                    children: [
-                      for (final section in filteredSections)
-                        _SettingsSection(section: section),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final wide = constraints.maxWidth >= 760;
+                      final selected = filteredSections
+                          .where((s) => s.group == _selectedGroup)
+                          .firstOrNull;
+                      final active = selected ?? filteredSections.first;
+                      final menu = Material(
+                        color: colors.card,
+                        clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(color: colors.divider),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            for (final section in filteredSections)
+                              ListTile(
+                                leading: AppIcon(section.icon, size: 20),
+                                title: Text(section.title),
+                                selected: wide && section.group == active.group,
+                                selectedTileColor: colors.primary.withValues(
+                                  alpha: .08,
+                                ),
+                                selectedColor: colors.primary,
+                                trailing: const Icon(
+                                  Icons.chevron_right,
+                                  size: 18,
+                                ),
+                                onTap: () => setState(
+                                  () => _selectedGroup = section.group,
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                      if (wide) {
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(width: 304, child: menu),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(child: detail(active)),
+                          ],
+                        );
+                      }
+                      if (selected == null) return menu;
+                      return PopScope(
+                        canPop: false,
+                        onPopInvokedWithResult: (didPop, _) {
+                          if (!didPop) setState(() => _selectedGroup = null);
+                        },
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () =>
+                                  setState(() => _selectedGroup = null),
+                              icon: const Icon(Icons.arrow_back, size: 18),
+                              label: Text(
+                                context.isEnglish
+                                    ? 'Settings groups'
+                                    : 'Nhóm cài đặt',
+                              ),
+                            ),
+                            detail(selected),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 const SizedBox(height: AppSpacing.xl),
                 Center(
@@ -1150,13 +1241,17 @@ class _SettingsProfileCard extends StatelessWidget {
   }
 }
 
+enum _SettingsGroup { account, store, staff, inventory, tax, system }
+
 class _SettingsSectionData {
+  final _SettingsGroup group;
   final String title;
   final IconData icon;
   final Color iconColor;
   final List<_SettingsEntry> entries;
 
   const _SettingsSectionData({
+    required this.group,
     required this.title,
     required this.icon,
     required this.iconColor,
@@ -1165,6 +1260,8 @@ class _SettingsSectionData {
 }
 
 class _SettingsEntry {
+  final bool loading;
+  final bool warehouseTool;
   final String label;
   final String description;
   final IconData? icon;
@@ -1174,6 +1271,8 @@ class _SettingsEntry {
   final VoidCallback? onTap;
 
   const _SettingsEntry({
+    this.loading = false,
+    this.warehouseTool = false,
     required this.label,
     required this.description,
     this.icon,
@@ -1267,12 +1366,19 @@ class _SettingsSection extends StatelessWidget {
               ),
             ),
 
-            // Entries List
-            for (var index = 0; index < section.entries.length; index++)
-              _SettingsActionRow(
-                entry: section.entries[index],
-                showDivider: index < section.entries.length - 1,
-              ),
+            for (var i = 0; i < section.entries.length; i++) ...[
+              if (i > 0) Divider(height: 1, color: colors.divider),
+              if (section.entries[i].warehouseTool &&
+                  (i == 0 || !section.entries[i - 1].warehouseTool))
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Text(
+                    context.isEnglish ? 'Warehouse tools' : 'Công cụ kho',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+              _SettingsActionRow(entry: section.entries[i]),
+            ],
           ],
         ),
       ),
@@ -1282,9 +1388,8 @@ class _SettingsSection extends StatelessWidget {
 
 class _SettingsActionRow extends StatelessWidget {
   final _SettingsEntry entry;
-  final bool showDivider;
 
-  const _SettingsActionRow({required this.entry, required this.showDivider});
+  const _SettingsActionRow({required this.entry});
 
   @override
   Widget build(BuildContext context) {
@@ -1300,15 +1405,6 @@ class _SettingsActionRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: 13,
-          ),
-          decoration: BoxDecoration(
-            border: showDivider
-                ? Border(
-                    bottom: BorderSide(
-                      color: colors.divider.withValues(alpha: 0.5),
-                    ),
-                  )
-                : null,
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -1365,7 +1461,7 @@ class _SettingsActionRow extends StatelessWidget {
                   label: entry.badge!,
                   color: Theme.of(context).colorScheme.primary,
                 )
-              else if (entry.onTap == null)
+              else if (entry.loading)
                 Text(
                   context.tr.common.loading,
                   style: GoogleFonts.inter(
@@ -1374,7 +1470,7 @@ class _SettingsActionRow extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 )
-              else
+              else if (entry.onTap != null)
                 Container(
                   width: 26,
                   height: 26,

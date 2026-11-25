@@ -16,6 +16,7 @@ import '../../suppliers/providers/supplier_provider.dart';
 import '../../products/providers/product_provider.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../../../core/offline/offline_providers.dart';
 import '../../../core/offline/offline_store.dart';
 import '../../../core/offline/offline_form_draft.dart';
@@ -499,22 +500,20 @@ class _PurchaseOrderFormScreenState
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () async {
-                  if (_saving) return;
-                  try {
-                    await _draft?.flush();
-                  } catch (_) {
-                    ToastService.showError(
-                      'Chưa giữ được bản nháp. Hãy thử lại trước khi rời trang.',
-                    );
-                    return;
-                  }
-                  if (context.mounted) Navigator.of(context).pop();
-                },
-              )
-            : null,
+        leading: AppNavigationBackLeading(
+          onPressed: () async {
+            if (_saving) return;
+            try {
+              await _draft?.flush();
+            } catch (_) {
+              ToastService.showError(
+                'Chưa giữ được bản nháp. Hãy thử lại trước khi rời trang.',
+              );
+              return;
+            }
+            if (context.mounted) navigatePageBack(context);
+          },
+        ),
         title: Text(
           'Đơn Mua Nhập Hàng',
           style: GoogleFonts.manrope(

@@ -27,6 +27,16 @@ String _currentRouterPath(BuildContext context) {
 }
 
 String pageBackFallbackRoute(String location) {
+  if (location.startsWith('/inventory/')) return '/inventory';
+  if (const {
+    '/tax-config',
+    '/tax-support',
+    '/payment-config',
+    '/employees',
+    '/notifications',
+  }.contains(location)) {
+    return '/settings';
+  }
   if (const [
     '/debt-aging',
     '/supplier-payables-aging',
@@ -40,6 +50,7 @@ String pageBackFallbackRoute(String location) {
     '/purchases-no-invoice',
     '/transactions',
     '/opening-balances',
+    '/budget-plans',
     '/tax-',
   ].any(location.startsWith))
     return '/finance';
@@ -79,6 +90,14 @@ void navigatePageBack(BuildContext context) {
   } else if (router != null) {
     router.go(pageBackFallbackRoute(_currentRouterPath(context)));
   }
+}
+
+class AppPageBackLeading extends StatelessWidget {
+  const AppPageBackLeading({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      AppNavigationBackLeading(onPressed: () => navigatePageBack(context));
 }
 
 class AppPageHeader extends StatelessWidget {

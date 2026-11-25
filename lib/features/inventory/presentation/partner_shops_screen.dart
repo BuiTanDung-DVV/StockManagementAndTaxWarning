@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_page_header.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../settings/providers/shop_provider.dart';
@@ -162,7 +164,10 @@ class _PartnerShopsScreenState extends ConsumerState<PartnerShopsScreen> {
       });
     });
     return Scaffold(
-      appBar: AppBar(title: const Text('Đối tác kho')),
+      appBar: AppBar(
+        leading: const AppPageBackLeading(),
+        title: const Text('Đối tác kho'),
+      ),
       body: shopId == null || !shop.isOwner
           ? const Center(child: Text('Chọn cửa hàng bạn đang quản lý.'))
           : SafeArea(
@@ -494,6 +499,17 @@ class _PartnerShopsScreenState extends ConsumerState<PartnerShopsScreen> {
           child: const Text('Chấp nhận'),
         ),
       ],
+      if (status == 'ACTIVE')
+        FilledButton.tonalIcon(
+          icon: const Icon(Icons.swap_horiz, size: 18),
+          label: const Text('Xem phiếu mượn'),
+          onPressed: () => context.push(
+            Uri(
+              path: '/inventory/loans',
+              queryParameters: {'partner': name},
+            ).toString(),
+          ),
+        ),
       if (status == 'ACTIVE')
         TextButton(
           onPressed: _saving ? null : () => _closePartnership(shopId, id, name),

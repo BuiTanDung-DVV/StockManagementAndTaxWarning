@@ -232,7 +232,7 @@ class _ViSettings implements SettingsTranslations {
 
   // Section 3
   @override
-  String get sectionGoodsLogistics => 'Hàng hóa & kho vận';
+  String get sectionGoodsLogistics => 'Hàng hóa & kho';
   @override
   String get productCategories => 'Danh mục sản phẩm';
   @override
@@ -279,7 +279,7 @@ class _ViSettings implements SettingsTranslations {
 
   // Section 4
   @override
-  String get sectionShopPayment => 'Cửa hàng & thanh toán';
+  String get sectionShopPayment => 'Cửa hàng & bán hàng';
   @override
   String get shopProfile => 'Thông tin cửa hàng';
   @override

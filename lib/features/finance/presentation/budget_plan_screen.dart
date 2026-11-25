@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../providers/finance_provider.dart';
 import 'budget_plan_section.dart';
 
@@ -20,11 +20,7 @@ class BudgetPlanScreen extends ConsumerWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leading: const AppPageBackLeading(),
         title: const Text('Kế Hoạch Ngân Sách'),
         centerTitle: true,
       ),

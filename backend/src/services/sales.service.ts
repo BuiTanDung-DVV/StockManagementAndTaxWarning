@@ -766,7 +766,6 @@ export class SalesService {
             if (rawItems.length === 0) {
                 throw new Error('Validation: Order must contain at least one item');
             }
-            const allLotDeductions: { lotId: number; qty: number }[] = [];
             const itemLotDeductions: { itemIndex: number, lotId: number, qty: number }[] = [];
             const stockDeductions: { productId: number; quantity: number }[] = [];
 
@@ -804,7 +803,8 @@ export class SalesService {
                     );
                     costPrice = cogsResult.unitCost;
                     totalCogs += cogsResult.totalCost;
-                    allLotDeductions.push(...cogsResult.lotDeductions);
+                    await this.cogsService.recordAverageMovement(shopId, product.id, -quantity, -cogsResult.totalCost, manager);
+                    await this.cogsService.commitLotDeductions(cogsResult.lotDeductions, manager);
                     cogsResult.lotDeductions.forEach(d => {
                         itemLotDeductions.push({ itemIndex: items.length, lotId: d.lotId, qty: d.qty });
                     });
@@ -984,10 +984,6 @@ export class SalesService {
                 await manager.update(Customer, { id: customer.id, shopId }, { balance });
             }
 
-            // Commit: trừ tồn kho các lô
-            if (allLotDeductions.length > 0) {
-                await this.cogsService.commitLotDeductions(allLotDeductions, manager);
-            }
             if (stockDeductions.length > 0) {
                 await this.commitStockDeductions(shopId, stockDeductions, savedOrder.id, manager);
             }
@@ -1101,11 +1097,15 @@ export class SalesService {
             // === Reverse FIFO: Hoàn trả số lượng vào lô hàng ===
             const lotDeductionRepo = manager.getRepository(SalesOrderLotDeduction);
             const lotRepo = manager.getRepository(InventoryLot);
-            const deductions = await lotDeductionRepo.find({ where: { orderId: id } });
+            const deductions = await lotDeductionRepo.find({ where: { orderId: id }, relations: ['orderItem'] });
 
             for (const d of deductions) {
                 const lot = await lotRepo.findOne({ where: { id: d.lotId } });
                 if (lot) {
+                    const quantity = Number(d.quantity);
+                    await this.cogsService.recordAverageMovement(
+                        shopId, lot.productId, quantity, quantity * Number(d.orderItem.costPrice), manager,
+                    );
                     lot.remainingQty = Number(lot.remainingQty) + Number(d.quantity);
                     await lotRepo.save(lot);
                 }
@@ -1415,6 +1415,11 @@ export class SalesService {
                     if (stockToRestore === 0) break;
                 }
                 if (stockToRestore > 0) throw new Error('Validation: Số lượng xuất kho gốc chưa đủ để hoàn phần hàng đã chọn');
+
+                const sold = order.items.find(line => (line.productId ?? line.product?.id) === item.product.id);
+                await this.cogsService.recordAverageMovement(
+                    shopId, item.product.id, Number(item.quantity), Number(item.quantity) * Number(sold?.costPrice ?? 0), manager,
+                );
 
                 // 2. Hoàn lô hàng
                 const deductions = await lotDeductionRepo.find({

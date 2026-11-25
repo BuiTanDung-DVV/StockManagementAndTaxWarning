@@ -3,9 +3,11 @@ import { ShopProfile } from '../system/entities';
 import {
     normalizeNonNegative,
     normalizeTaxCode,
+    TaxValidationError,
+    validateTaxPeriod,
 } from '../tax/tax-policy';
 import { resolveCurrentMonthExpensePeriod } from '../finance/finance-period.utils';
-import { taxPolicyService } from './tax-policy.service';
+import { DEFAULT_VERIFIED_TAX_POLICY_2026, taxPolicyService } from './tax-policy.service';
 import { SalesService } from './sales.service';
 
 export class TaxService {
@@ -17,6 +19,9 @@ export class TaxService {
     }
 
     async getTaxReportData(shopId: number, period: string, year: string) {
+        const { policy, usedFallback: policyUsedFallback } = await taxPolicyService.getCurrentPolicySelection();
+        validateTaxPeriod(period, year, policy.fiscalYear);
+
         // period: "01", "02", ... or "Q1", "Q2"
         let from: string;
         let to: string;
@@ -35,6 +40,9 @@ export class TaxService {
             from = `${y}-${String(m).padStart(2, '0')}-01`;
             to = `${y}-${String(m).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
         }
+        if (from < policy.effectiveFrom) {
+            throw new TaxValidationError('Chính sách hiện tại chưa có hiệu lực tại đầu kỳ đã chọn.');
+        }
         const { fromDate: startDate } =
             resolveCurrentMonthExpensePeriod(from, to);
 
@@ -49,14 +57,18 @@ export class TaxService {
         if (shop?.businessSector === 'PRODUCTION') industryCode = 'SAN_XUAT';
         if (shop?.businessSector === 'OTHER') industryCode = 'KHAC';
 
-        const [policy, activeRules, totalRevenue] = await Promise.all([
-            taxPolicyService.getCurrentPolicy(),
+        const [activeRules, totalRevenue] = await Promise.all([
             taxPolicyService.getCurrentRules(startDate),
             this.getRevenueBasis(shopId, from, to),
         ]);
         const activeRule = activeRules.find(rule => rule.industryCode === industryCode);
         if (!activeRule) {
             throw new Error(`Thiếu tỷ lệ thuế cho nhóm ngành ${industryCode}`);
+        }
+        const rateUsedFallback = activeRule.id === 0
+            && (shop?.customVatRate == null || shop?.customPitRate == null);
+        if (rateUsedFallback && y !== DEFAULT_VERIFIED_TAX_POLICY_2026.fiscalYear) {
+            throw new TaxValidationError('Chưa có tỷ lệ thuế có hiệu lực cho nhóm ngành tại kỳ đã chọn.');
         }
 
         let vatRate = Number(activeRule.vatRate);
@@ -98,6 +110,12 @@ export class TaxService {
             yearlyRevenue,
             taxExempt,
             policy,
+            period,
+            year,
+            vatRate,
+            pitRate,
+            policyUsedFallback,
+            rateUsedFallback,
             warning: yearlyRevenue > warningRevenueThreshold && yearlyRevenue <= taxExemptionThreshold
                 ? `Doanh thu năm của bạn đạt trên ${warningRevenueThreshold.toLocaleString('vi-VN')} đồng, sắp chạm ngưỡng chịu thuế ${taxExemptionThreshold.toLocaleString('vi-VN')} đồng.`
                 : undefined

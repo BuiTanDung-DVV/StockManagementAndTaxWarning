@@ -9,7 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../providers/inventory_provider.dart';
 import '../../products/providers/product_provider.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 
 class _StkItem {
   int? productId;
@@ -288,11 +288,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leading: const AppPageBackLeading(),
         title: Text(
           'Phiếu Kiểm Kê Kho',
           style: GoogleFonts.manrope(

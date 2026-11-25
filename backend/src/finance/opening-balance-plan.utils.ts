@@ -21,6 +21,7 @@ export type OpeningBalanceSnapshot = {
         amount?: string;
         quantity?: number;
         currentQuantity?: number;
+        averageBalance?: { quantity: number; value: string };
         lots?: Lot[]; // Eligible, currently available lots in server FIFO order.
         debts?: Debt[];
     }>;
@@ -122,6 +123,7 @@ export function buildOpeningBalancePlan(
     const blockers = [...snapshot.gaps];
     const totals = { cashDeltaCents: 0, bankDeltaCents: 0, receivableDeltaCents: 0,
         payableDeltaCents: 0, stockValueDeltaCents: 0 };
+    const averageBalances = new Map<string, { quantity: number; valueCents: number }>();
     const rows = request.rows.map(actual => {
         if (!actual || typeof actual.key !== 'string' || seen.has(actual.key)) {
             fail('Một đối tượng chỉ được đối chiếu một lần trong cùng lượt.');
@@ -147,6 +149,19 @@ export function buildOpeningBalancePlan(
             if (add(current, delta) < 0) blockers.push(`${actual.key}: Lịch sử sau ngày đối chiếu làm tồn hiện tại bị âm.`);
             let valueDeltaCents = 0;
             const lotAllocations: Array<{ lotId: number; quantity: number; valueCents: number }> = [];
+            const productKey = actual.key.split(':')[1];
+            const average = baseline.averageBalance
+                ? averageBalances.get(productKey) ?? {
+                    quantity: baseline.averageBalance.quantity,
+                    valueCents: cents(baseline.averageBalance.value),
+                }
+                : undefined;
+            const valueRemoved = (numberRemoved: number) => {
+                if (!average || average.quantity <= 0) return 0;
+                const total = BigInt(average.valueCents) * BigInt(numberRemoved);
+                const available = BigInt(average.quantity);
+                return safe((total + available / 2n) / available);
+            };
             if (delta > 0) {
                 if (actual.unitCost === undefined) fail('Hàng bổ sung phải có giá vốn, kể cả giá vốn bằng 0.');
                 valueDeltaCents = safe(BigInt(delta) * BigInt(cents(actual.unitCost)));
@@ -162,13 +177,22 @@ export function buildOpeningBalancePlan(
                     const cost = cents(lot.costPrice);
                     const taken = Math.min(remaining, available);
                     if (taken > 0) {
-                        const valueCents = safe(BigInt(taken) * BigInt(cost));
+                        const previouslyRemoved = -delta - remaining;
+                        const valueCents = average
+                            ? valueRemoved(previouslyRemoved + taken) - valueRemoved(previouslyRemoved)
+                            : safe(BigInt(taken) * BigInt(cost));
                         lotAllocations.push({ lotId: lot.id, quantity: taken, valueCents });
                         valueDeltaCents = add(valueDeltaCents, -valueCents);
                         remaining -= taken;
                     }
                 }
                 if (remaining > 0) blockers.push(`${actual.key}: Không đủ lô hợp lệ để giảm tồn và xác định giá vốn.`);
+            }
+            if (average) {
+                averageBalances.set(productKey, {
+                    quantity: add(average.quantity, delta),
+                    valueCents: add(average.valueCents, valueDeltaCents),
+                });
             }
             totals.stockValueDeltaCents = add(totals.stockValueDeltaCents, valueDeltaCents);
             return { key: actual.key, kind: baseline.kind, before: previous, actual: after,

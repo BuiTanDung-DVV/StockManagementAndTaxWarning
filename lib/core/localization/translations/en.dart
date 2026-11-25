@@ -232,7 +232,7 @@ class _EnSettings implements SettingsTranslations {
 
   // Section 3
   @override
-  String get sectionGoodsLogistics => 'Products & Logistics';
+  String get sectionGoodsLogistics => 'Products & Inventory';
   @override
   String get productCategories => 'Product Categories';
   @override
@@ -280,7 +280,7 @@ class _EnSettings implements SettingsTranslations {
 
   // Section 4
   @override
-  String get sectionShopPayment => 'Store & Payments';
+  String get sectionShopPayment => 'Store & Sales';
   @override
   String get shopProfile => 'Store Information';
   @override

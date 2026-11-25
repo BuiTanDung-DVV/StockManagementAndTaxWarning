@@ -10,7 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../providers/inventory_provider.dart';
 import 'stock_take_form_screen.dart';
 import 'stock_take_history_screen.dart';
@@ -54,11 +54,7 @@ class _StockTakeScreenState extends ConsumerState<StockTakeScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leading: const AppPageBackLeading(),
         title: Text(
           'Kiểm kê Kho',
           style: GoogleFonts.manrope(

@@ -1,5 +1,9 @@
 import { Request, Response } from 'express';
-import { aiService } from '../services/ai.service';
+import { AiDataAccess, aiService } from '../services/ai.service';
+import { AppDataSource } from '../config/db.config';
+import { AuthRequest } from '../middleware/auth.middleware';
+import { membershipHasAnyPermission } from '../middleware/permission.utils';
+import { ShopMember } from '../shop/entities';
 import {
   AiShopContextError,
   requireAiShopId,
@@ -11,7 +15,26 @@ export const getAiShopId = (req: Request): number => {
 
 const aiErrorStatus = (error: unknown) => error instanceof AiShopContextError ? 400 : 500;
 
-export const chatWithAdvisor = async (req: Request, res: Response): Promise<void> => {
+async function loadAiAccess(req: AuthRequest, shopId: number): Promise<AiDataAccess | null> {
+  if (!req.user) return null;
+  const member = await AppDataSource.getRepository(ShopMember).findOne({
+    where: { shopId, userId: req.user.sub, isActive: true, status: 'ACTIVE' },
+    relations: ['role'],
+  });
+  if (!member) return null;
+  const canView = (...keys: string[]) => membershipHasAnyPermission(member, keys, 'view', shopId);
+  return {
+    inventory: canView('inventory'),
+    inventoryValue: canView('finance'),
+    sales: canView('sales', 'finance', 'dashboard'),
+    receivables: canView('customers'),
+    payables: canView('finance'),
+    tax: canView('finance'),
+    knowledge: canView('settings'),
+  };
+}
+
+export const chatWithAdvisor = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const shopId = getAiShopId(req);
     const { question, history } = req.body;
@@ -41,10 +64,15 @@ export const chatWithAdvisor = async (req: Request, res: Response): Promise<void
       return;
     }
 
+    const access = await loadAiAccess(req, shopId);
+    if (!access) {
+      res.status(403).json({ success: false, message: 'Bạn không có quyền truy cập cửa hàng này.' });
+      return;
+    }
     const result = await aiService.askAdvisor(shopId, {
       question: question.trim(),
       history,
-    });
+    }, access);
     res.json({
       success: true,
       data: result,
@@ -58,10 +86,15 @@ export const chatWithAdvisor = async (req: Request, res: Response): Promise<void
   }
 };
 
-export const getQuickInsights = async (req: Request, res: Response): Promise<void> => {
+export const getQuickInsights = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const shopId = getAiShopId(req);
-    const insights = await aiService.getQuickInsights(shopId);
+    const access = await loadAiAccess(req, shopId);
+    if (!access) {
+      res.status(403).json({ success: false, message: 'Bạn không có quyền truy cập cửa hàng này.' });
+      return;
+    }
+    const insights = await aiService.getQuickInsights(shopId, access);
     res.json({
       success: true,
       data: insights,

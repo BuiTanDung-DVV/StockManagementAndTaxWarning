@@ -10,7 +10,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/type_parser.dart';
 import '../../../core/widgets/app_animations.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/custom_date_range_picker.dart';
@@ -124,11 +124,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).maybePop(),
-              )
-            : null,
+        leading: const AppPageBackLeading(),
         title: const Text('Kết quả kinh doanh'),
         centerTitle: true,
         actions: [

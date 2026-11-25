@@ -12,6 +12,7 @@ import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/purchase_order_detail_provider.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -207,7 +208,10 @@ class _PurchaseOrderDetailState
   }
 
   Widget _message(Widget child) => Scaffold(
-    appBar: AppBar(title: const Text('Chi Tiết Đơn Nhập')),
+    appBar: AppBar(
+      leading: const AppPageBackLeading(),
+      title: const Text('Chi Tiết Đơn Nhập'),
+    ),
     body: Center(
       child: Padding(padding: const EdgeInsets.all(24), child: child),
     ),

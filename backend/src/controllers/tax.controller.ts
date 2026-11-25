@@ -6,7 +6,6 @@ import { ShopProfile } from '../system/entities';
 import {
     requireValidTaxCode,
     TaxValidationError,
-    validateTaxPeriod,
 } from '../tax/tax-policy';
 import {
     taxPolicyService,
@@ -87,9 +86,6 @@ export const exportToHTKK = async (req: Request, res: Response) => {
         const shopId = (req as any).shopId;
         const period = req.query.period as string || '01';
         const year = req.query.year as string || new Date().getFullYear().toString();
-        const policy = await taxPolicyService.getCurrentPolicy();
-        validateTaxPeriod(period, year, policy.fiscalYear);
-
         const reportData = await taxService.getTaxReportData(shopId, period, year);
         const taxCode = requireValidTaxCode(reportData.taxCode);
 
@@ -132,9 +128,6 @@ export const getTaxEstimate = async (req: Request, res: Response) => {
         const shopId = (req as any).shopId;
         const period = req.query.period as string || '01';
         const year = req.query.year as string || new Date().getFullYear().toString();
-        const policy = await taxPolicyService.getCurrentPolicy();
-        validateTaxPeriod(period, year, policy.fiscalYear);
-
         const reportData = await taxService.getTaxReportData(shopId, period, year);
         res.json({ success: true, data: reportData });
     } catch (e: any) {

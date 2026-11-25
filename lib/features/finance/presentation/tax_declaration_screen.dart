@@ -70,11 +70,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
         appBar: AppBar(
           automaticallyImplyLeading: false,
           leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-          leading: Navigator.of(context).canPop()
-              ? AppNavigationBackLeading(
-                  onPressed: () => Navigator.of(context).pop(),
-                )
-              : null,
+          leading: const AppPageBackLeading(),
           title: const Text('Kê khai thuế'),
         ),
         body: Center(
@@ -163,11 +159,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
         appBar: AppBar(
           automaticallyImplyLeading: false,
           leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-          leading: Navigator.of(context).canPop()
-              ? AppNavigationBackLeading(
-                  onPressed: () => Navigator.of(context).pop(),
-                )
-              : null,
+          leading: const AppPageBackLeading(),
           title: const Text('Kê khai thuế'),
         ),
         body: Center(
@@ -260,7 +252,9 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: 60,
-        leading: AppNavigationBackLeading(onPressed: () => navigatePageBack(context)),
+        leading: AppNavigationBackLeading(
+          onPressed: () => navigatePageBack(context),
+        ),
         title: const Text('Kê khai thuế'),
         actions: [featureGuideButton(context, 'tax_declaration')],
       ),

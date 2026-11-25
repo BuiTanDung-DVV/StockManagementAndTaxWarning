@@ -6,7 +6,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/address_input_field.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../providers/system_provider.dart';
 
 class ShopProfileScreen extends ConsumerStatefulWidget {
@@ -112,11 +112,7 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leading: const AppPageBackLeading(),
         title: const Text('Thông tin cửa hàng'),
       ),
       body: Center(

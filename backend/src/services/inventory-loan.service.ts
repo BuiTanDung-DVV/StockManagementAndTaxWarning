@@ -68,12 +68,18 @@ export async function shipInventoryLoan(shopId: number, userId: number, loanId: 
              ) r ON true WHERE s.loan_id = $1`,
             [loanId],
         );
-        const limit = returning ? totals.loan_received - totals.return_sent : loan.requested_quantity;
-        if ((!returning && totals.loan_sent > 0) || input.quantity > limit) {
+        const limit = returning
+            ? totals.loan_received - totals.return_sent
+            : loan.requested_quantity - totals.loan_sent;
+        if (input.quantity > limit || (!returning && totals.return_sent > 0)) {
             throw new InventoryLoanError('Số lượng xuất vượt số lượng còn được xử lý.');
         }
         const lenderProductId = returning ? loan.lender_product_id : input.lenderProductId;
         if (!lenderProductId) throw new InventoryLoanError('Chọn sản phẩm tương ứng ở bên cho mượn.');
+        if (!returning && totals.loan_sent > 0
+            && (lenderProductId !== loan.lender_product_id || input.warehouseId !== totals.lender_warehouse_id)) {
+            throw new InventoryLoanError('Các lượt xuất mượn phải dùng cùng sản phẩm và kho xuất ban đầu.');
+        }
         const borrowerProduct = await eligibleProduct(manager, loan.borrower_shop_id, loan.borrower_product_id);
         const lenderProduct = await eligibleProduct(manager, loan.lender_shop_id, lenderProductId);
         if (borrowerProduct.unit.trim().toLowerCase() !== lenderProduct.unit.trim().toLowerCase()) {
@@ -100,6 +106,7 @@ export async function shipInventoryLoan(shopId: number, userId: number, loanId: 
             [cost.lotDeductions.map(lot => lot.lotId)],
         );
         if (batch) throw new InventoryLoanError('Hàng quản lý theo lô có hạn dùng chưa hỗ trợ xuất mượn.');
+        await costing.recordAverageMovement(shopId, productId, -input.quantity, -cost.totalCost, manager);
         await costing.commitLotDeductions(cost.lotDeductions, manager);
         stock.quantity = Number(stock.quantity) - input.quantity;
         stock.updatedAt = new Date();
@@ -110,7 +117,7 @@ export async function shipInventoryLoan(shopId: number, userId: number, loanId: 
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
             [loanId, direction, input.warehouseId, destination, input.quantity, userId, input.operationId, cost.unitCost],
         );
-        if (!returning) {
+        if (!returning && totals.loan_sent === 0) {
             await manager.query('UPDATE shop_inventory_loans SET lender_product_id=$1 WHERE id=$2', [lenderProductId, loanId]);
         }
         await manager.save(InventoryMovement, {
@@ -126,7 +133,7 @@ export async function receiveInventoryLoan(shopId: number, userId: number, shipm
     return AppDataSource.transaction(async manager => {
         await lockShopMutation(manager, shopId);
         const [shipment] = await manager.query(
-            `SELECT s.*, l.borrower_shop_id, l.borrower_product_id, l.lender_product_id
+            `SELECT s.*, l.borrower_shop_id, l.borrower_product_id, l.lender_product_id, l.canceled_at
              FROM shop_inventory_loan_shipments s JOIN shop_inventory_loans l ON l.id=s.loan_id
              JOIN shop_inventory_partnerships p ON p.id=l.partnership_id
              WHERE s.id=$1 AND $2 IN (p.requester_shop_id,p.recipient_shop_id)
@@ -135,9 +142,7 @@ export async function receiveInventoryLoan(shopId: number, userId: number, shipm
              FOR UPDATE OF l, s`,
             [shipmentId, shopId],
         );
-        if (!shipment || shipment.unit_cost == null) {
-            throw new InventoryLoanError('Lượt gửi không khả dụng hoặc cần đối chiếu giá vốn.');
-        }
+        if (!shipment) throw new InventoryLoanError('Lượt gửi không khả dụng.');
         const [previous] = await manager.query(
             'SELECT id, received_quantity FROM shop_inventory_loan_receipts WHERE shipment_id=$1 AND operation_id=$2',
             [shipmentId, input.operationId],
@@ -147,6 +152,10 @@ export async function receiveInventoryLoan(shopId: number, userId: number, shipm
                 throw new InventoryLoanError('Mã thao tác đã được dùng cho số lượng khác.');
             }
             return { id: previous.id };
+        }
+        if (shipment.canceled_at) throw new InventoryLoanError('Phiếu mượn không khả dụng.');
+        if (shipment.unit_cost == null) {
+            throw new InventoryLoanError('Lượt gửi cần đối chiếu giá vốn trước khi nhận.');
         }
         const [total] = await manager.query(
             'SELECT COALESCE(SUM(received_quantity),0)::int AS qty FROM shop_inventory_loan_receipts WHERE shipment_id=$1',
@@ -186,6 +195,7 @@ export function listInventoryLoans(shopId: number) {
     return AppDataSource.query(
         `SELECT l.id, l.requested_quantity AS "requestedQuantity", l.created_at AS "createdAt",
                 l.canceled_at AS "canceledAt", (l.borrower_shop_id = $1) AS "borrowing",
+                CASE WHEN l.borrower_shop_id <> $1 THEN l.lender_product_id END AS "lenderProductId",
                 partner.shop_name AS "partnerName", product.name AS "productName", product.unit,
                 COALESCE(shipments.items,'[]'::jsonb) AS shipments,
                 COALESCE(shipments.outstanding,0)::int AS "outstandingQuantity"
@@ -197,7 +207,9 @@ export function listInventoryLoans(shopId: number) {
          LEFT JOIN LATERAL (
              SELECT jsonb_agg(jsonb_build_object(
                         'id', s.id, 'direction', s.direction, 'shippedQuantity', s.shipped_quantity,
-                        'receivedQuantity', COALESCE(receipts.quantity, 0), 'shippedAt', s.shipped_at
+                        'receivedQuantity', COALESCE(receipts.quantity, 0), 'shippedAt', s.shipped_at,
+                        'sourceWarehouseId', CASE WHEN l.borrower_shop_id <> $1 AND s.direction = 'LOAN'
+                                                 THEN s.source_warehouse_id END
                     ) ORDER BY s.id) AS items,
                     SUM(CASE WHEN s.direction = 'LOAN' THEN receipts.quantity ELSE -receipts.quantity END) AS outstanding
              FROM shop_inventory_loan_shipments s

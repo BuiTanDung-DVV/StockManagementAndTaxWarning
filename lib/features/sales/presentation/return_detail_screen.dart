@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/product_thumbnail.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -50,11 +50,7 @@ class ReturnDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leading: const AppPageBackLeading(),
         title: Text(
           'Chi Tiết Đơn Trả Hàng',
           style: GoogleFonts.manrope(

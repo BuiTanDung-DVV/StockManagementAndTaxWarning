@@ -12,6 +12,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../services/sales_payment_sound.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -163,13 +164,11 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () {
-                  if (!_confirming) Navigator.of(context).pop();
-                },
-              )
-            : null,
+        leading: AppNavigationBackLeading(
+          onPressed: () {
+            if (!_confirming) navigatePageBack(context);
+          },
+        ),
         title: Text(
           'Thanh toán chuyển khoản',
           style: GoogleFonts.manrope(

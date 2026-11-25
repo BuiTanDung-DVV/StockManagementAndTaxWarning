@@ -54,11 +54,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
         appBar: AppBar(
           automaticallyImplyLeading: false,
           leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-          leading: Navigator.of(context).canPop()
-              ? AppNavigationBackLeading(
-                  onPressed: () => Navigator.of(context).pop(),
-                )
-              : null,
+          leading: const AppPageBackLeading(),
           title: const Text('Công cụ tính thuế'),
         ),
         body: Center(
@@ -138,7 +134,9 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: 60,
-        leading: AppNavigationBackLeading(onPressed: () => navigatePageBack(context)),
+        leading: AppNavigationBackLeading(
+          onPressed: () => navigatePageBack(context),
+        ),
         title: Text(
           'Công cụ tính thuế HKD ${config.fiscalYear}',
           style: GoogleFonts.manrope(

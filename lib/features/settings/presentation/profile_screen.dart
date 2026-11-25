@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/app_avatar.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'avatar_picker_dialog.dart';
 import 'profile_email_verification_dialog.dart';
@@ -192,9 +192,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         centerTitle: true,
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(onPressed: () => Navigator.pop(context))
-            : null,
+        leading: const AppPageBackLeading(),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

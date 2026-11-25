@@ -1,13 +1,23 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_page_header.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/warehouse_display_name.dart';
+import '../../../core/utils/search_text.dart';
+import '../../../core/widgets/product_thumbnail.dart';
 import '../../settings/providers/shop_provider.dart';
+
+part 'shelf_floor_storage.dart';
+
+part 'inventory_shelf_lookup_bar.dart';
 
 const _path = '/inventory/shelf-positions';
 
@@ -53,7 +63,6 @@ enum _FixtureKind {
   wall('Vách ngăn', Icons.view_week_outlined),
   pallet('Pallet', Icons.layers_outlined),
   bulk('Hàng cồng kềnh', Icons.inventory_2_outlined),
-  // Deprecated kinds for legacy compatibility:
   coldStorage('Tủ mát', Icons.ac_unit_outlined),
   display('Bàn trưng bày', Icons.table_restaurant_outlined),
   counter('Quầy', Icons.storefront_outlined);
@@ -61,6 +70,26 @@ enum _FixtureKind {
   const _FixtureKind(this.label, this.icon);
   final String label;
   final IconData icon;
+
+  bool get holdsProducts =>
+      const {rack, coldStorage, display, pallet, bulk}.contains(this);
+
+  String assetPath({bool occupied = false}) {
+    final file = switch (this) {
+      rack => occupied ? 'rack_loaded' : 'rack_empty',
+      coldStorage => 'cold_storage',
+      display => 'display',
+      pallet => 'pallet',
+      counter => 'counter',
+      bulk => 'bulk',
+      receiving => 'receiving',
+      dispatch => 'dispatch',
+      wall => 'wall',
+      aisle => 'aisle',
+      door => 'door',
+    };
+    return 'assets/warehouse/$file.webp';
+  }
 
   (int, int) get footprint => switch (this) {
     rack => (3, 2),
@@ -92,25 +121,29 @@ class _FloorObject {
     this.height = 1.0,
     this.rotation = 0,
     this.manualRack = false,
+    this.name = '',
+    this.note = '',
     this.block,
   });
 
   factory _FloorObject.fromJson(Map<String, dynamic> json) {
-    _FixtureKind kind;
-    try {
-      kind = _FixtureKind.values.byName(json['kind'] as String);
-    } catch (_) {
-      kind = _FixtureKind.rack;
+    final kind = _FixtureKind.values.byName(json['kind'] as String? ?? 'rack');
+    final savedId = json['id'] as String;
+    if (savedId.trim().isEmpty || savedId == 'stock:') {
+      throw const FormatException('Thiếu mã vật thể.');
     }
+    final storageId = kind.holdsProducts && !savedId.startsWith('stock:');
     return _FloorObject(
-      id: json['id'] as String,
+      id: storageId ? 'stock:V-$savedId' : savedId,
       kind: kind,
       x: (json['x'] as num?)?.toDouble().clamp(0.0, 1.0) ?? 0.0,
       y: (json['y'] as num?)?.toDouble().clamp(0.0, 1.0) ?? 0.0,
       width: (json['width'] as num?)?.toDouble().clamp(0.5, 3.0) ?? 1.0,
       height: (json['height'] as num?)?.toDouble().clamp(0.5, 3.0) ?? 1.0,
       rotation: ((json['rotation'] as int?) ?? 0) % 4,
-      manualRack: json['manualRack'] == true,
+      manualRack: storageId || json['manualRack'] == true,
+      name: json['name'] as String? ?? '',
+      note: json['note'] as String? ?? '',
       block: switch (json['block']) {
         [int column, int row, int columns, int rows] => (
           column: column,
@@ -118,7 +151,8 @@ class _FloorObject {
           columns: columns,
           rows: rows,
         ),
-        _ => null,
+        null => null,
+        _ => throw const FormatException('Sai tọa độ vật thể.'),
       },
     );
   }
@@ -128,10 +162,17 @@ class _FloorObject {
   final double x, y, width, height;
   final int rotation;
   final bool manualRack;
+  final String name;
+  final String note;
   final _GridBlock? block;
 
   bool get stockRack => id.startsWith('stock:');
   String get rackCode => stockRack ? id.substring(6) : '';
+  String get rackTitle => name.isNotEmpty
+      ? name
+      : kind == _FixtureKind.rack
+      ? 'Kệ $rackCode'
+      : kind.label;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -142,10 +183,14 @@ class _FloorObject {
     'height': height,
     'rotation': rotation,
     if (manualRack) 'manualRack': true,
+    if (name.isNotEmpty) 'name': name,
+    if (note.isNotEmpty) 'note': note,
     if (block case final b?) 'block': [b.column, b.row, b.columns, b.rows],
   };
 
   _FloorObject copyWith({
+    String? name,
+    String? note,
     double? x,
     double? y,
     double? width,
@@ -161,22 +206,41 @@ class _FloorObject {
     height: height ?? this.height,
     rotation: rotation ?? this.rotation,
     manualRack: manualRack,
+    name: name ?? this.name,
+    note: note ?? this.note,
     block: block ?? this.block,
   );
 }
 
-class InventoryShelvesScreen extends ConsumerStatefulWidget {
+class InventoryShelvesScreen extends ConsumerWidget {
   const InventoryShelvesScreen({super.key});
 
   @override
-  ConsumerState<InventoryShelvesScreen> createState() =>
-      _InventoryShelvesScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final shopId = ref.watch(shopProvider.select((s) => s.currentShopId));
+    return _ShopShelves(key: ValueKey(shopId));
+  }
 }
 
-class _InventoryShelvesScreenState
-    extends ConsumerState<InventoryShelvesScreen> {
-  String _search = '';
-  (int, String, String)? _selectedRack;
+class _ShopShelves extends ConsumerStatefulWidget {
+  const _ShopShelves({super.key});
+
+  @override
+  ConsumerState<_ShopShelves> createState() => _InventoryShelvesScreenState();
+}
+
+typedef _ShelfLookup = ({String rack, int level, int bin, int request});
+
+class _InventoryShelvesScreenState extends ConsumerState<_ShopShelves> {
+  final _searchController = TextEditingController();
+  _ShelfLookup? _lookup;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   bool _assigning = false;
   int? _activeWarehouseId;
 
@@ -185,12 +249,38 @@ class _InventoryShelvesScreenState
     Map<String, dynamic>? position,
     int? warehouseId,
     String? rackCode,
+    int? initialLevel,
+    int? initialBin,
   }) async {
     if (_assigning) return;
     setState(() => _assigning = true);
     bool current() => mounted && ref.read(shopProvider).currentShopId == shopId;
     final api = ref.read(apiClientProvider);
     try {
+      final snapshot =
+          (await api.getOnlineInShop(_path, '$shopId', isCurrentScope: current)
+                  as List)
+              .cast<Map<String, dynamic>>();
+      if (!mounted || !current()) return;
+      if (position != null) {
+        final target = position;
+        position = snapshot
+            .where(
+              (row) =>
+                  row['warehouseId'] == target['warehouseId'] &&
+                  row['productId'] == target['productId'],
+            )
+            .firstOrNull;
+        if (position == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vị trí đã thay đổi. Hãy chọn lại sản phẩm.'),
+            ),
+          );
+          ref.invalidate(_shelvesProvider(shopId));
+          return;
+        }
+      }
       final choices = <Map<String, dynamic>>[];
       if (position == null) {
         for (var page = 1; current(); page++) {
@@ -222,22 +312,18 @@ class _InventoryShelvesScreenState
                     'warehouseName': row['warehouse']?['name'] ?? 'Kho',
                     'productName': row['product']?['name'] ?? 'Sản phẩm',
                     'sku': row['product']?['sku'] ?? '',
+                    'imageUrl': row['product']?['imageUrl'],
                   };
                 }),
           );
-          if (items.length < 500) break;
+          final totalPages = data['totalPages'] as int?;
+          if (items.isEmpty ||
+              (totalPages != null ? page >= totalPages : items.length < 500)) {
+            break;
+          }
         }
       } else {
-        choices.add({
-          'warehouseId': position['warehouseId'],
-          'productId': position['productId'],
-          'warehouseName': position['warehouseName'],
-          'productName': position['productName'],
-          'sku': position['sku'],
-          'rack': position['rack'],
-          'level': position['level'],
-          'bin': position['bin'],
-        });
+        choices.add(position);
       }
       if (!mounted || choices.isEmpty || !current()) {
         if (mounted && current()) {
@@ -251,18 +337,109 @@ class _InventoryShelvesScreenState
         }
         return;
       }
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted || !current()) return;
+      final racksByWarehouse = <int, Map<String, _FloorObject?>>{};
+      for (final id
+          in choices.map((row) => row['warehouseId'] as int).toSet()) {
+        final racks = racksByWarehouse[id] = {
+          for (final row in snapshot)
+            if (row['warehouseId'] == id) row['rack'] as String: null,
+        };
+        final saved = _readFloor(
+          prefs.get('inventory.shelf.scene.$shopId.$id'),
+        );
+        for (final item in saved.objects.values) {
+          if (item.stockRack) racks[item.rackCode] = item;
+        }
+        if (warehouseId == id && rackCode != null) {
+          racks.putIfAbsent(rackCode, () => null);
+        }
+      }
       final result = await showDialog<Map<String, dynamic>>(
         context: context,
-        builder: (_) => _PositionDialog(choices: choices, rackCode: rackCode),
+        builder: (_) => _PositionDialog(
+          choices: choices,
+          positions: snapshot,
+          racksByWarehouse: racksByWarehouse,
+          rackCode: rackCode,
+          initialLevel: initialLevel,
+          initialBin: initialBin,
+        ),
       );
       if (result == null || !current()) return;
+      final rawPositions = await api.getOnlineInShop(
+        _path,
+        '$shopId',
+        isCurrentScope: current,
+      );
+      if (!mounted || !current()) return;
+      final previous = (rawPositions as List)
+          .cast<Map<String, dynamic>>()
+          .where(
+            (row) =>
+                row['warehouseId'] == result['warehouseId'] &&
+                row['productId'] == result['productId'],
+          )
+          .firstOrNull;
+      if (previous != null) {
+        final moved = [
+          'rack',
+          'level',
+          'bin',
+        ].any((field) => previous[field] != result[field]);
+        if (!moved) return;
+        String address(Map<String, dynamic> row) =>
+            'Kệ ${row['rack']} · Tầng ${row['level']} · Ô ${row['bin']}';
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Chuyển vị trí sản phẩm?'),
+            content: Text(
+              "${previous['productName']} đã có vị trí trong kho này.\n\n"
+              'Vị trí hiện tại: ${address(previous)}\n'
+              'Vị trí mới: ${address(result)}',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Giữ vị trí cũ'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Chuyển vị trí'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !current()) return;
+      }
       await api.putInShop(
         _path,
         '$shopId',
-        data: result,
+        data: {
+          ...result,
+          'expectedPosition': previous == null
+              ? null
+              : {
+                  for (final field in ['rack', 'level', 'bin'])
+                    field: previous[field],
+                },
+        },
         isCurrentScope: current,
       );
-      if (current()) ref.invalidate(_shelvesProvider(shopId));
+      if (mounted && current()) {
+        ref.invalidate(_shelvesProvider(shopId));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              previous == null
+                  ? 'Đã gắn vị trí sản phẩm.'
+                  : 'Đã chuyển vị trí sản phẩm.',
+            ),
+          ),
+        );
+      }
     } catch (error) {
       if (mounted && current()) {
         ScaffoldMessenger.of(
@@ -280,21 +457,33 @@ class _InventoryShelvesScreenState
     final shop = ref.watch(shopProvider);
     final shopId = shop.currentShopId;
     final canEdit = shop.hasPermission('inventory', 'edit');
+    final shelves = shopId == null || shopId < 1
+        ? null
+        : ref.watch(_shelvesProvider(shopId));
+    final warehouses =
+        shelves?.value?.warehouses ?? const <Map<String, dynamic>>[];
+    final currentWarehouse =
+        warehouses.where((w) => w['id'] == _activeWarehouseId).firstOrNull ??
+        warehouses.firstOrNull;
+    final warehouseId = currentWarehouse?['id'] as int?;
 
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
+        leading: const AppPageBackLeading(),
         title: const Text('Sơ đồ kệ'),
         backgroundColor: c.surface,
         foregroundColor: c.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 1,
         actions: [
-          if (shopId != null && shopId > 0 && canEdit)
+          if (shopId != null && warehouseId != null && canEdit)
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: OutlinedButton.icon(
-                onPressed: _assigning ? null : () => _assign(shopId),
+                onPressed: _assigning
+                    ? null
+                    : () => _assign(shopId, warehouseId: warehouseId),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: c.primary,
                   side: BorderSide(color: c.primary.withValues(alpha: 0.5)),
@@ -319,362 +508,135 @@ class _InventoryShelvesScreenState
                 style: TextStyle(color: c.textSecondary, fontSize: 15),
               ),
             )
-          : ref
-                .watch(_shelvesProvider(shopId))
-                .when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (_, _) => Center(
+          : shelves!.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (_, _) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline, size: 48, color: c.textMuted),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Không tải được sơ đồ.',
+                      style: TextStyle(color: c.textSecondary, fontSize: 16),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.tonal(
+                      onPressed: () => ref.invalidate(_shelvesProvider(shopId)),
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
+              ),
+              data: (data) {
+                final positions = data.positions;
+
+                if (warehouseId == null || currentWarehouse == null) {
+                  return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.error_outline, size: 48, color: c.textMuted),
+                        Icon(
+                          Icons.warehouse_outlined,
+                          size: 56,
+                          color: c.textMuted,
+                        ),
                         const SizedBox(height: 12),
                         Text(
-                          'Không tải được sơ đồ.',
+                          'Tạo kho trước khi bố trí mặt bằng.',
                           style: TextStyle(
                             color: c.textSecondary,
                             fontSize: 16,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        FilledButton.tonal(
-                          onPressed: () =>
-                              ref.invalidate(_shelvesProvider(shopId)),
-                          child: const Text('Thử lại'),
-                        ),
                       ],
                     ),
-                  ),
-                  data: (data) {
-                    final positions = data.positions;
-                    final warehouses = data.warehouses;
+                  );
+                }
 
-                    if (warehouses.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.warehouse_outlined,
-                              size: 56,
-                              color: c.textMuted,
+                final warehousePositions = positions
+                    .where((p) => p['warehouseId'] == warehouseId)
+                    .toList();
+
+                final racks = <String, List<Map<String, dynamic>>>{};
+                for (final p in warehousePositions) {
+                  final code = (p['rack'] as String?)?.trim() ?? '';
+                  if (code.isNotEmpty) {
+                    (racks[code] ??= []).add(p);
+                  }
+                }
+
+                final query = foldSearchText(_searchController.text);
+                final matches = query.isEmpty
+                    ? const <Map<String, dynamic>>[]
+                    : warehousePositions
+                          .where(
+                            (p) => ['productName', 'sku', 'rack'].any(
+                              (key) => foldSearchText(p[key]).contains(query),
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Tạo kho trước khi bố trí mặt bằng.',
-                              style: TextStyle(
-                                color: c.textSecondary,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
+                          )
+                          .toList();
+                final matchingRacks = {
+                  for (final row in matches) (row['rack'] as String).trim(),
+                };
+
+                return Column(
+                  children: [
+                    _ShelfLookupBar(
+                      warehouses: warehouses,
+                      warehouseId: warehouseId,
+                      rackCount: racks.length,
+                      controller: _searchController,
+                      query: query,
+                      matches: matches,
+                      onWarehouseChanged: (id) => setState(() {
+                        _activeWarehouseId = id;
+                        _lookup = null;
+                      }),
+                      onSearchChanged: () => setState(() {}),
+                      onOpenPosition: (row) => setState(() {
+                        _lookup = (
+                          rack: row['rack'] as String,
+                          level: row['level'] as int,
+                          bin: row['bin'] as int,
+                          request: (_lookup?.request ?? 0) + 1,
+                        );
+                      }),
+                    ),
+                    const Divider(height: 1),
+                    // Canvas & Inspection Panel Area
+                    Expanded(
+                      child: _RackFloor(
+                        key: ValueKey((shopId, warehouseId)),
+                        storageKey:
+                            'inventory.shelf.scene.$shopId.$warehouseId',
+                        warehouseId: warehouseId,
+                        warehouseName:
+                            currentWarehouse['name'] as String? ?? 'Kho',
+                        canEdit: canEdit,
+                        racks: racks,
+                        searchQuery: query,
+                        matchingRacks: matchingRacks,
+                        lookup: _lookup,
+                        onEditPosition: (position) =>
+                            _assign(shopId, position: position),
+                        onOpenProduct: shop.hasPermission('products')
+                            ? (id) =>
+                                  context.push('/products/$id?from=inventory')
+                            : null,
+                        onAssignRack: (rack, level, bin) => _assign(
+                          shopId,
+                          warehouseId: warehouseId,
+                          rackCode: rack,
+                          initialLevel: level,
+                          initialBin: bin,
                         ),
-                      );
-                    }
-
-                    final selectedWarehouseId =
-                        _activeWarehouseId ?? warehouses.first['id'] as int;
-                    final currentWarehouse = warehouses.firstWhere(
-                      (w) => w['id'] == selectedWarehouseId,
-                      orElse: () => warehouses.first,
-                    );
-
-                    final warehousePositions = positions
-                        .where((p) => p['warehouseId'] == selectedWarehouseId)
-                        .toList();
-
-                    final racks = <String, List<Map<String, dynamic>>>{};
-                    for (final p in warehousePositions) {
-                      final code = (p['rack'] as String?)?.trim() ?? '';
-                      if (code.isNotEmpty) {
-                        (racks[code] ??= []).add(p);
-                      }
-                    }
-
-                    bool matchesSearch(Map<String, dynamic> p) {
-                      if (_search.isEmpty) return false;
-                      final query = _search.toLowerCase();
-                      final name = (p['productName'] as String? ?? '')
-                          .toLowerCase();
-                      final sku = (p['sku'] as String? ?? '').toLowerCase();
-                      final rack = (p['rack'] as String? ?? '').toLowerCase();
-                      return name.contains(query) ||
-                          sku.contains(query) ||
-                          rack.contains(query);
-                    }
-
-                    final matchingPositions = warehousePositions
-                        .where(matchesSearch)
-                        .toList();
-                    final matchingRacks = <String>{};
-                    for (final p in matchingPositions) {
-                      final code = (p['rack'] as String?)?.trim() ?? '';
-                      if (code.isNotEmpty) matchingRacks.add(code);
-                    }
-
-                    return Column(
-                      children: [
-                        // Top Search & Filter Bar
-                        Container(
-                          color: c.surface,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Row(
-                                children: [
-                                  // Warehouse Selector
-                                  if (warehouses.length > 1) ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: c.cardAlt,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: c.divider),
-                                      ),
-                                      child: DropdownButtonHideUnderline(
-                                        child: DropdownButton<int>(
-                                          value: selectedWarehouseId,
-                                          isDense: true,
-                                          style: TextStyle(
-                                            color: c.textPrimary,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 14,
-                                          ),
-                                          items: warehouses.map((w) {
-                                            return DropdownMenuItem<int>(
-                                              value: w['id'] as int,
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.store_outlined,
-                                                    size: 16,
-                                                    color: c.primary,
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Text(
-                                                    w['name'] as String? ??
-                                                        'Kho',
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          }).toList(),
-                                          onChanged: (val) {
-                                            if (val != null) {
-                                              setState(() {
-                                                _activeWarehouseId = val;
-                                                _selectedRack = null;
-                                              });
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                  ],
-                                  // Search input
-                                  Expanded(
-                                    child: SizedBox(
-                                      height: 42,
-                                      child: TextField(
-                                        textInputAction: TextInputAction.search,
-                                        style: TextStyle(
-                                          color: c.textPrimary,
-                                          fontSize: 14,
-                                        ),
-                                        onChanged: (value) => setState(() {
-                                          _search = value.trim().toLowerCase();
-                                          _selectedRack = null;
-                                        }),
-                                        decoration: InputDecoration(
-                                          isDense: true,
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                vertical: 10,
-                                                horizontal: 12,
-                                              ),
-                                          prefixIcon: Icon(
-                                            Icons.search,
-                                            size: 20,
-                                            color: c.textMuted,
-                                          ),
-                                          suffixIcon: _search.isNotEmpty
-                                              ? IconButton(
-                                                  icon: const Icon(
-                                                    Icons.clear,
-                                                    size: 18,
-                                                  ),
-                                                  onPressed: () => setState(
-                                                    () => _search = '',
-                                                  ),
-                                                )
-                                              : null,
-                                          hintText:
-                                              'Tìm theo tên mặt hàng hoặc SKU',
-                                          hintStyle: TextStyle(
-                                            color: c.textMuted,
-                                            fontSize: 14,
-                                          ),
-                                          filled: true,
-                                          fillColor: c.inputFill,
-                                          enabledBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            borderSide: BorderSide(
-                                              color: c.divider,
-                                            ),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            borderSide: BorderSide(
-                                              color: c.primary,
-                                              width: 1.5,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (_search.isNotEmpty) ...[
-                                const SizedBox(height: 6),
-                                if (matchingPositions.isEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      top: 4,
-                                      left: 4,
-                                    ),
-                                    child: Text(
-                                      'Không tìm thấy mặt hàng trên sơ đồ.',
-                                      style: TextStyle(
-                                        color: Colors.amber.shade800,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  )
-                                else ...[
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.amber.shade50,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Colors.amber.shade300,
-                                      ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Tìm thấy ${matchingPositions.length} sản phẩm trên ${matchingRacks.length} kệ:',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.amber.shade900,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Wrap(
-                                          spacing: 8,
-                                          runSpacing: 6,
-                                          children: [
-                                            for (final p
-                                                in matchingPositions.take(10))
-                                              ActionChip(
-                                                label: Text(
-                                                  '${p['productName']} (Kệ ${p['rack']})',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
-                                                    color:
-                                                        Colors.amber.shade900,
-                                                  ),
-                                                ),
-                                                backgroundColor: Colors.white,
-                                                side: BorderSide(
-                                                  color: Colors.amber.shade400,
-                                                ),
-                                                visualDensity:
-                                                    VisualDensity.compact,
-                                                onPressed: () {
-                                                  setState(() {
-                                                    _selectedRack = (
-                                                      selectedWarehouseId,
-                                                      currentWarehouse['name']
-                                                              as String? ??
-                                                          'Kho',
-                                                      p['rack'] as String,
-                                                    );
-                                                  });
-                                                },
-                                              ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ],
-                          ),
-                        ),
-                        const Divider(height: 1, thickness: 1),
-                        // Canvas & Inspection Panel Area
-                        Expanded(
-                          child: _RackFloor(
-                            key: ValueKey((shopId, selectedWarehouseId)),
-                            storageKey:
-                                'inventory.shelf.scene.$shopId.$selectedWarehouseId',
-                            warehouseId: selectedWarehouseId,
-                            warehouseName:
-                                currentWarehouse['name'] as String? ?? 'Kho',
-                            canEdit: canEdit,
-                            racks: racks,
-                            searchQuery: _search,
-                            matchingRacks: matchingRacks,
-                            selectedRackCode:
-                                _selectedRack?.$1 == selectedWarehouseId
-                                ? _selectedRack?.$3
-                                : null,
-                            onSelectRack: (rackCode) {
-                              setState(() {
-                                _selectedRack = rackCode == null
-                                    ? null
-                                    : (
-                                        selectedWarehouseId,
-                                        currentWarehouse['name'] as String? ??
-                                            'Kho',
-                                        rackCode,
-                                      );
-                              });
-                            },
-                            onAssignRack: (rack) => _assign(
-                              shopId,
-                              warehouseId: selectedWarehouseId,
-                              rackCode: rack,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
     );
   }
 }
@@ -689,9 +651,10 @@ class _RackFloor extends StatefulWidget {
     required this.racks,
     required this.searchQuery,
     required this.matchingRacks,
-    this.selectedRackCode,
-    required this.onSelectRack,
+    this.lookup,
     required this.onAssignRack,
+    required this.onEditPosition,
+    this.onOpenProduct,
   });
 
   final String storageKey;
@@ -701,9 +664,10 @@ class _RackFloor extends StatefulWidget {
   final Map<String, List<Map<String, dynamic>>> racks;
   final String searchQuery;
   final Set<String> matchingRacks;
-  final String? selectedRackCode;
-  final ValueChanged<String?> onSelectRack;
-  final ValueChanged<String> onAssignRack;
+  final _ShelfLookup? lookup;
+  final void Function(String rack, int? level, int? bin) onAssignRack;
+  final ValueChanged<Map<String, dynamic>> onEditPosition;
+  final ValueChanged<int>? onOpenProduct;
 
   @override
   State<_RackFloor> createState() => _RackFloorState();
@@ -714,8 +678,10 @@ class _RackFloorState extends State<_RackFloor> {
   static const int _baseColumns = 24;
   static const int _baseRows = 16;
   static const int _maxGridSize = 60;
+  static const int _maxSavedRows = 4096;
 
   final _floorKey = GlobalKey();
+  final _viewKey = GlobalKey();
   final _viewport = TransformationController();
 
   Map<String, _FloorObject> _objects = {};
@@ -726,20 +692,174 @@ class _RackFloorState extends State<_RackFloor> {
   bool _editing = false;
   bool _saving = false;
   bool _loading = true;
-  bool _is3dView = false;
+  String? _readWarning;
+  Object? _damagedSource;
+  int _rows = _baseRows;
+  int _legacyRows = _baseRows;
   _FixtureKind? _placement;
+
+  Offset? _strokeStart;
+  _GridBlock? _preview;
+  ({String id, Offset grab})? _moving;
+  Timer? _edgePanTimer;
+  Offset? _dragPointer;
+
+  _GridBlock _stroke(Offset from, Offset to) {
+    final x = (from.dx / _cellSize).floor();
+    final y = (from.dy / _cellSize).floor();
+    final dx = (to.dx / _cellSize).floor() - x;
+    final dy = (to.dy / _cellSize).floor() - y;
+    final horizontal = dx.abs() >= dy.abs();
+    final endX = x + (horizontal ? dx.clamp(-19, 19) : 0);
+    final endY = y + (horizontal ? 0 : dy.clamp(-19, 19));
+    return (
+      column: math.min(x, endX),
+      row: math.min(y, endY),
+      columns: (endX - x).abs() + 1,
+      rows: (endY - y).abs() + 1,
+    );
+  }
+
+  bool _available(
+    _GridBlock b,
+    Map<String, _FloorObject> layout, {
+    String? movingId,
+  }) =>
+      b.column >= 0 &&
+      b.row >= 0 &&
+      b.column + b.columns <= _columns &&
+      b.row + b.rows <= _rows &&
+      b.row + b.rows <= _maxSavedRows &&
+      !_overlaps(b, movingId ?? '', layout);
+
+  Offset? _floorPoint(Offset global) {
+    final box = _floorKey.currentContext?.findRenderObject() as RenderBox?;
+    return box?.globalToLocal(global);
+  }
+
+  void _panWhileDragging(_FloorObject item, Map<String, _FloorObject> layout) {
+    final global = _dragPointer;
+    final view = _viewKey.currentContext?.findRenderObject() as RenderBox?;
+    if (global == null || view == null || _moving?.id != item.id) return;
+    final point = view.globalToLocal(global);
+    final size = view.size;
+    if (!(Offset.zero & size).contains(point)) return;
+
+    double step(double coordinate, double extent) {
+      final edge = math.min(64.0, extent / 4);
+      return ((edge - coordinate).clamp(0.0, edge) -
+              (coordinate - extent + edge).clamp(0.0, edge)) *
+          12 /
+          edge;
+    }
+
+    final matrix = _viewport.value;
+    final scale = matrix.storage[0];
+    final x = matrix.storage[12], y = matrix.storage[13];
+    double shift(double current, double delta, double scene, double visible) {
+      if (delta == 0 || scene <= visible) return current;
+      final limit = delta < 0 ? visible - scene : 0.0;
+      if (delta < 0 && current <= limit || delta > 0 && current >= limit) {
+        return current;
+      }
+      return delta < 0
+          ? math.max(limit, current + delta)
+          : math.min(limit, current + delta);
+    }
+
+    final nextX = shift(
+      x,
+      step(point.dx, size.width),
+      (_columns * _cellSize + 80) * scale,
+      size.width,
+    );
+    final nextY = shift(
+      y,
+      step(point.dy, size.height),
+      (_rows * _cellSize + 80) * scale,
+      size.height,
+    );
+    if (nextX == x && nextY == y) return;
+    final block = _dropBlock(
+      DragTargetDetails(
+        data: (id: item.id, kind: null),
+        offset: global - Offset(nextX - x, nextY - y),
+      ),
+      layout,
+    );
+    _viewport.value = Matrix4.copy(matrix)..setTranslationRaw(nextX, nextY, 0);
+    if (block != _preview) setState(() => _preview = block);
+  }
+
+  _GridBlock? _dropBlock(
+    DragTargetDetails<_SceneDrag> details,
+    Map<String, _FloorObject> layout,
+  ) {
+    final point = _floorPoint(details.offset);
+    if (point == null) return null;
+    final item = layout[details.data.id];
+    final kind = details.data.kind;
+    if (item == null && kind == null) return null;
+    final source = item == null ? null : _blockFor(item);
+    final (columns, rows) = source == null
+        ? kind!.footprint
+        : (source.columns, source.rows);
+    final grab = _moving?.id == item?.id && item != null
+        ? _moving!.grab
+        : Offset(columns * _cellSize / 2, rows * _cellSize / 2);
+    final origin = point - grab;
+    return (
+      column: (origin.dx / _cellSize).round(),
+      row: (origin.dy / _cellSize).round(),
+      columns: columns,
+      rows: rows,
+    );
+  }
+
+  void _blockedDrop() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Vùng đích phải nằm trong sơ đồ và không chồng vật thể khác.',
+        ),
+      ),
+    );
+  }
+
+  Widget _dropPreview(_GridBlock block, Map<String, _FloorObject> layout) {
+    final valid = _available(block, layout, movingId: _moving?.id);
+    final color = valid ? Colors.teal.shade600 : Colors.red.shade700;
+    return Positioned(
+      key: const ValueKey('warehouse-drop-preview'),
+      left: block.column * _cellSize,
+      top: block.row * _cellSize,
+      width: block.columns * _cellSize,
+      height: block.rows * _cellSize,
+      child: IgnorePointer(
+        child: Semantics(
+          label: valid ? 'Vùng đích hợp lệ' : 'Vùng đích không hợp lệ',
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .28),
+              border: Border.all(color: color, width: 3),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Center(
+              child: Icon(
+                valid ? Icons.check_circle : Icons.block,
+                color: color,
+                size: 24,
+                applyTextScaling: false,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   int get _columns =>
       (_baseColumns + _extraColumns).clamp(_baseColumns, _maxGridSize);
-  int get _rows => math
-      .max(
-        _baseRows + _extraRows,
-        _objects.values.fold(_baseRows, (maxRow, item) {
-          final b = item.block;
-          return b == null ? maxRow : math.max(maxRow, b.row + b.rows + 1);
-        }),
-      )
-      .clamp(_baseRows, _maxGridSize);
 
   @override
   void initState() {
@@ -750,14 +870,40 @@ class _RackFloorState extends State<_RackFloor> {
   @override
   void didUpdateWidget(covariant _RackFloor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.selectedRackCode != null &&
-        widget.selectedRackCode != oldWidget.selectedRackCode) {
-      _selection = 'stock:${widget.selectedRackCode}';
-    }
+    final lookup = widget.lookup;
+    if (lookup == null || lookup == oldWidget.lookup) return;
+    _selection = 'stock:${lookup.rack}';
+    _inspectionLevel = lookup.level;
+    _inspectionBin = lookup.bin;
+    _editing = false;
+    _placement = null;
+    _preview = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.lookup != lookup) return;
+      _revealRack(lookup.rack);
+      if (!_wideLayout) {
+        _showMobileInspectionSheet(lookup.rack, _appColors(context));
+      }
+    });
+  }
+
+  bool _wideLayout = false;
+
+  void _revealRack(String code) {
+    final item = _effectiveLayout()['stock:$code'];
+    if (item == null || _viewSize.isEmpty) return;
+    final block = _blockFor(item);
+    final center = Offset(
+      40 + (block.column + block.columns / 2) * _cellSize,
+      40 + (block.row + block.rows / 2) * _cellSize,
+    );
+    final scale = math.max(1.0, _viewport.value.getMaxScaleOnAxis());
+    _centerOn(center, scale);
   }
 
   @override
   void dispose() {
+    _edgePanTimer?.cancel();
     _viewport.dispose();
     super.dispose();
   }
@@ -765,32 +911,20 @@ class _RackFloorState extends State<_RackFloor> {
   Future<void> _load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final json = prefs.getString(widget.storageKey);
-      if (json != null) {
-        final decoded = jsonDecode(json);
-        final saved = decoded is Map<String, dynamic> ? decoded : null;
-        final rawList = ((saved?['objects'] ?? decoded) as List);
-        final list = rawList.map(
-          (val) => _FloorObject.fromJson(Map<String, dynamic>.from(val as Map)),
-        );
-        if (mounted) {
-          setState(() {
-            _objects = {for (final item in list) item.id: item};
-            _extraColumns = (saved?['extraColumns'] as int? ?? 0).clamp(
-              0,
-              _maxGridSize - _baseColumns,
-            );
-            _extraRows = (saved?['extraRows'] as int? ?? 0).clamp(
-              0,
-              _maxGridSize - _baseRows,
-            );
-          });
-        }
-      }
+      if (!mounted) return;
+      final raw = prefs.get(widget.storageKey);
+      final saved = _readFloor(raw);
+      setState(() {
+        _objects = saved.objects;
+        _extraColumns = saved.columns;
+        _extraRows = saved.rows;
+        _readWarning = saved.warning;
+        _damagedSource = saved.warning == null ? null : raw;
+      });
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không đọc được bố trí kệ đã lưu.')),
+        setState(
+          () => _readWarning = 'Chưa thể đọc bố trí đã lưu trên thiết bị.',
         );
       }
     } finally {
@@ -805,13 +939,30 @@ class _RackFloorState extends State<_RackFloor> {
     int? extraColumns,
     int? extraRows,
   }) async {
-    if (_saving || _loading || !widget.canEdit) return;
+    if (_saving || _loading || _readWarning != null || !widget.canEdit) return;
+    if (next.values.any((item) {
+      final block = item.block;
+      return block != null && block.row + block.rows > _maxSavedRows;
+    })) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vị trí vượt giới hạn lưu của mặt bằng.')),
+      );
+      return;
+    }
     final previous = (
       objects: Map<String, _FloorObject>.from(_objects),
       columns: _extraColumns,
       rows: _extraRows,
     );
     final oldSelection = _selection;
+    // Old snapshots used relative positions. Anchor those objects before the
+    // edit changes the grid size to preserve the layout currently on screen.
+    next = {
+      for (final item in next.values)
+        item.id: item.block == null
+            ? item.copyWith(block: _blockFor(item))
+            : item,
+    };
     setState(() {
       _objects = next;
       _extraColumns = extraColumns ?? _extraColumns;
@@ -822,9 +973,7 @@ class _RackFloorState extends State<_RackFloor> {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonString = (next.isEmpty && _extraColumns == 0 && _extraRows == 0)
-          ? '[]'
-          : jsonEncode(next.values.toList());
+      final jsonString = _encodeFloor(next, _extraColumns, _extraRows);
 
       if (!await prefs.setString(widget.storageKey, jsonString)) {
         throw StateError('Không lưu được bố trí.');
@@ -841,6 +990,69 @@ class _RackFloorState extends State<_RackFloor> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Không lưu được bố trí kho.')),
       );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _recoverFloor() async {
+    final source = _damagedSource;
+    if (source == null || !widget.canEdit || _saving) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Khôi phục mặt bằng?'),
+        content: const Text(
+          'Ứng dụng sẽ lưu một bản sao dữ liệu gốc trên thiết bị rồi dùng '
+          'các vật thể đọc được làm mặt bằng để tiếp tục chỉnh sửa.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Khôi phục'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true || !widget.canEdit || _saving) return;
+    setState(() => _saving = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+      if (!mounted || !widget.canEdit) return;
+      final key = widget.storageKey;
+      if (jsonEncode(prefs.get(key)) != jsonEncode(source)) {
+        await _load();
+        return;
+      }
+      final backup = '$key.backup.${DateTime.now().microsecondsSinceEpoch}';
+      final original = source is String ? source : jsonEncode(source);
+      if (!await prefs.setString(backup, original)) throw StateError('backup');
+      if (!mounted || !widget.canEdit) return;
+      if (!await prefs.setString(
+        key,
+        _encodeFloor(_objects, _extraColumns, _extraRows),
+      )) {
+        throw StateError('restore');
+      }
+      if (mounted) {
+        setState(() {
+          _readWarning = null;
+          _damagedSource = null;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chưa khôi phục được mặt bằng. Vui lòng thử lại.'),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -866,7 +1078,7 @@ class _RackFloorState extends State<_RackFloor> {
     final rows = (item.rotation.isEven ? h : w);
     return _snap(
       (item.x * _columns - cols / 2).round(),
-      (item.y * _rows - rows / 2).round(),
+      (item.y * _legacyRows - rows / 2).round().clamp(0, _legacyRows - rows),
       cols,
       rows,
     );
@@ -887,28 +1099,6 @@ class _RackFloorState extends State<_RackFloor> {
     });
   }
 
-  _GridBlock _findFreeBlock(
-    _GridBlock requested,
-    String id,
-    Map<String, _FloorObject> layout,
-  ) {
-    if (!_overlaps(requested, id, layout)) return requested;
-    for (var d = 1; d <= 8; d++) {
-      for (var dy = -d; dy <= d; dy++) {
-        for (var dx = -d; dx <= d; dx++) {
-          final candidate = _snap(
-            requested.column + dx,
-            requested.row + dy,
-            requested.columns,
-            requested.rows,
-          );
-          if (!_overlaps(candidate, id, layout)) return candidate;
-        }
-      }
-    }
-    return requested;
-  }
-
   void _updateBlock(
     _FloorObject item,
     _GridBlock block,
@@ -917,11 +1107,16 @@ class _RackFloorState extends State<_RackFloor> {
     double? width,
     double? height,
   }) {
-    final effectiveBlock = _findFreeBlock(block, item.id, layout);
+    if (_overlaps(block, item.id, layout)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vị trí này đã có vật khác.')),
+      );
+      return;
+    }
     _save({
       ..._objects,
       item.id: item.copyWith(
-        block: effectiveBlock,
+        block: block,
         rotation: rotation,
         width: width,
         height: height,
@@ -931,49 +1126,69 @@ class _RackFloorState extends State<_RackFloor> {
 
   void _place(
     _SceneDrag drag,
-    Offset position,
+    _GridBlock block,
     Map<String, _FloorObject> layout,
   ) {
     final kind = drag.kind;
     final old = layout[drag.id];
+    if (old != null && _blockFor(old) == block) return;
     int rackNumber = 1;
     String rackId() => 'stock:K-${rackNumber.toString().padLeft(2, '0')}';
-    if (old == null && kind == _FixtureKind.rack) {
+    if (old == null && kind?.holdsProducts == true) {
       while (layout.containsKey(rackId())) {
         rackNumber++;
       }
     }
 
-    final item = old == null
-        ? _FloorObject(
-            id: kind == _FixtureKind.rack
-                ? rackId()
-                : DateTime.now().microsecondsSinceEpoch.toString(),
-            manualRack: kind == _FixtureKind.rack,
-            kind: kind!,
-            x: position.dx,
-            y: position.dy,
-          )
-        : old.copyWith(x: position.dx, y: position.dy);
-
-    final current = _blockFor(item);
-    final targetCol = (position.dx * _columns - current.columns / 2).floor();
-    final targetRow = (position.dy * _rows - current.rows / 2).floor();
-    final block = _snap(targetCol, targetRow, current.columns, current.rows);
-
+    final item =
+        old ??
+        _FloorObject(
+          id: kind!.holdsProducts
+              ? rackId()
+              : DateTime.now().microsecondsSinceEpoch.toString(),
+          manualRack: kind.holdsProducts,
+          kind: kind,
+          x: block.column / _columns,
+          y: block.row / _rows,
+        );
     _updateBlock(item, block, layout);
   }
 
   void _zoomBy(double factor) {
-    final matrix = _viewport.value;
-    final scale = matrix.getMaxScaleOnAxis();
-    final adjustment = (scale * factor).clamp(0.5, 2.5) / scale;
-    _viewport.value = Matrix4.copy(matrix)
-      ..scaleByDouble(adjustment, adjustment, 1, 1);
+    if (_viewSize.isEmpty) return;
+    final center = _viewport.toScene(_viewSize.center(Offset.zero));
+    final scale = (_viewport.value.getMaxScaleOnAxis() * factor).clamp(
+      _minZoom,
+      2.5,
+    );
+    _centerOn(center, scale);
+  }
+
+  bool _framed = false;
+  Size _viewSize = Size.zero;
+  double get _fitZoom => math
+      .min(
+        _viewSize.width / (_columns * _cellSize + 80),
+        _viewSize.height / (_rows * _cellSize + 80),
+      )
+      .clamp(0.000001, 2.5);
+  double get _minZoom => math.min(0.5, _fitZoom);
+
+  void _centerOn(Offset sceneCenter, double scale) {
+    _viewport.value = Matrix4.identity()
+      ..translateByDouble(
+        _viewSize.width / 2 - sceneCenter.dx * scale,
+        _viewSize.height / 2 - sceneCenter.dy * scale,
+        0,
+        1,
+      )
+      ..scaleByDouble(scale, scale, scale, 1);
   }
 
   void _resetZoom() {
-    _viewport.value = Matrix4.identity();
+    if (_viewSize.isEmpty) return;
+    final w = _columns * _cellSize + 80, h = _rows * _cellSize + 80;
+    _centerOn(Offset(w / 2, h / 2), _fitZoom);
   }
 
   Map<String, _FloorObject> _effectiveLayout() {
@@ -985,25 +1200,56 @@ class _RackFloorState extends State<_RackFloor> {
           !widget.racks.containsKey(key.substring(6)),
     );
 
-    var nextCol = 1;
-    var nextRow = 2;
+    final savedEnd = _objects.values.fold(0, (end, item) {
+      final b = item.block;
+      return b == null ? end : math.max(end, b.row + b.rows);
+    });
+    _legacyRows = math
+        .max(_baseRows + _extraRows, savedEnd + 1)
+        .clamp(_baseRows, _maxGridSize);
+    _rows = math.max(_legacyRows, savedEnd);
+
+    // Fixed slots leave a one-cell aisle. Index occupied cells once so each
+    // candidate is visited only once, including slots past the original floor.
+    final occupied = <int>{};
+    final columns = _columns;
+    for (final item in layout.values) {
+      final b = _blockFor(item);
+      for (var y = b.row; y < b.row + b.rows; y++) {
+        for (var x = b.column; x < b.column + b.columns; x++) {
+          occupied.add(y * columns + x);
+        }
+      }
+    }
+    final slotsPerRow = columns ~/ 4;
+    var slot = 0;
     for (final name in widget.racks.keys) {
       final id = 'stock:$name';
-      layout.putIfAbsent(id, () {
-        final block = _snap(nextCol, nextRow, 3, 2);
-        nextCol += 4;
-        if (nextCol + 3 >= _columns) {
-          nextCol = 1;
-          nextRow += 3;
+      if (layout.containsKey(id)) continue;
+      int x, y;
+      bool blocked;
+      do {
+        x = 1 + slot % slotsPerRow * 4;
+        y = 1 + slot ~/ slotsPerRow * 3;
+        slot++;
+        blocked = false;
+        for (var dy = 0; dy < 2 && !blocked; dy++) {
+          for (var dx = 0; dx < 3; dx++) {
+            if (occupied.contains((y + dy) * columns + x + dx)) {
+              blocked = true;
+              break;
+            }
+          }
         }
-        return _FloorObject(
-          id: id,
-          kind: _FixtureKind.rack,
-          x: block.column / _columns,
-          y: block.row / _rows,
-          block: block,
-        );
-      });
+      } while (blocked);
+      _rows = math.max(_rows, y + 2);
+      layout[id] = _FloorObject(
+        id: id,
+        kind: _FixtureKind.rack,
+        x: 0,
+        y: 0,
+        block: (column: x, row: y, columns: 3, rows: 2),
+      );
     }
     return layout;
   }
@@ -1017,10 +1263,33 @@ class _RackFloorState extends State<_RackFloor> {
     final width = _columns * _cellSize;
     final height = _rows * _cellSize;
 
-    return LayoutBuilder(
+    final floor = LayoutBuilder(
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth >= 900;
+        _wideLayout = isDesktop;
 
+        final inspected =
+            isDesktop && !_editing && selectedItem?.stockRack == true;
+        final directory =
+            constraints.maxWidth >= 1100 &&
+            !_editing &&
+            !inspected &&
+            widget.racks.isNotEmpty;
+        _viewSize = Size(
+          constraints.maxWidth -
+              (inspected
+                  ? 360
+                  : directory
+                  ? 280
+                  : 0),
+          constraints.maxHeight,
+        );
+        if (!_framed && !_loading && !_viewSize.isEmpty) {
+          _framed = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _resetZoom();
+          });
+        }
         return Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1031,61 +1300,116 @@ class _RackFloorState extends State<_RackFloor> {
                   // Main Floor Interactive Viewer
                   Positioned.fill(
                     child: InteractiveViewer(
+                      key: _viewKey,
                       transformationController: _viewport,
-                      minScale: 0.5,
+                      panEnabled: _placement == null && _moving == null,
+                      scaleEnabled: _placement == null && _moving == null,
+                      minScale: _minZoom,
                       maxScale: 2.5,
                       boundaryMargin: const EdgeInsets.all(250),
                       constrained: false,
                       child: Container(
-                        key: _floorKey,
                         width: width,
                         height: height,
                         margin: const EdgeInsets.all(40),
                         child: DragTarget<_SceneDrag>(
-                          onWillAcceptWithDetails: (_) => widget.canEdit,
+                          key: _floorKey,
+                          onWillAcceptWithDetails: (_) =>
+                              _editing && widget.canEdit && !_saving,
+                          onMove: (details) {
+                            if (details.data.id == _moving?.id) {
+                              _dragPointer = details.offset;
+                            }
+                            final block = _dropBlock(details, layout);
+                            if (block != _preview) {
+                              setState(() => _preview = block);
+                            }
+                          },
+                          onLeave: (_) {
+                            if (_preview != null) {
+                              setState(() => _preview = null);
+                            }
+                          },
                           onAcceptWithDetails: (details) {
-                            final box =
-                                _floorKey.currentContext?.findRenderObject()
-                                    as RenderBox?;
-                            if (box == null) return;
-                            final point = box.globalToLocal(details.offset);
-                            setState(() => _placement = null);
-                            _place(
-                              details.data,
-                              Offset(
-                                (point.dx / width).clamp(0.0, 1.0),
-                                (point.dy / height).clamp(0.0, 1.0),
-                              ),
+                            final block = _dropBlock(details, layout);
+                            setState(() => _preview = null);
+                            if (block == null || !_editing || _saving) return;
+                            if (!_available(
+                              block,
                               layout,
-                            );
+                              movingId: details.data.id,
+                            )) {
+                              _blockedDrop();
+                              return;
+                            }
+                            setState(() => _placement = null);
+                            _place(details.data, block, layout);
                           },
                           builder: (context, candidateData, rejectedData) {
                             return GestureDetector(
                               behavior: HitTestBehavior.opaque,
-                              onTapDown: (details) {
-                                if (_placement != null) {
-                                  final normX =
-                                      (details.localPosition.dx / width).clamp(
-                                        0.0,
-                                        1.0,
-                                      );
-                                  final normY =
-                                      (details.localPosition.dy / height).clamp(
-                                        0.0,
-                                        1.0,
-                                      );
-                                  _place(
-                                    (id: null, kind: _placement),
-                                    Offset(normX, normY),
-                                    layout,
-                                  );
-                                  setState(() => _placement = null);
-                                } else {
-                                  setState(() => _selection = null);
-                                  widget.onSelectRack(null);
-                                }
-                              },
-                              child: _buildFloorSurface(layout, c, isDesktop),
+                              onTapUp: _placement == null
+                                  ? (_) {
+                                      setState(() => _selection = null);
+                                    }
+                                  : null,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  _buildFloorSurface(layout, c, isDesktop),
+                                  if (_placement != null && widget.canEdit)
+                                    Listener(
+                                      behavior: HitTestBehavior.opaque,
+                                      onPointerDown: (e) {
+                                        _strokeStart = e.localPosition;
+                                        setState(
+                                          () => _preview = _stroke(
+                                            e.localPosition,
+                                            e.localPosition,
+                                          ),
+                                        );
+                                      },
+                                      onPointerMove: (e) {
+                                        if (_strokeStart != null) {
+                                          setState(
+                                            () => _preview = _stroke(
+                                              _strokeStart!,
+                                              e.localPosition,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      onPointerCancel: (_) => setState(() {
+                                        _strokeStart = null;
+                                        _preview = null;
+                                      }),
+                                      onPointerUp: (e) {
+                                        final start = _strokeStart;
+                                        if (start == null) return;
+                                        final block = _stroke(
+                                          start,
+                                          e.localPosition,
+                                        );
+                                        if (_available(block, layout)) {
+                                          _place(
+                                            (id: null, kind: _placement),
+                                            block,
+                                            layout,
+                                          );
+                                          _placement = null;
+                                        } else {
+                                          _blockedDrop();
+                                        }
+                                        setState(() {
+                                          _strokeStart = null;
+                                          _preview = null;
+                                        });
+                                      },
+                                    ),
+                                  if (_preview case final b?)
+                                    _dropPreview(b, layout),
+                                ],
+                              ),
                             );
                           },
                         ),
@@ -1182,59 +1506,13 @@ class _RackFloorState extends State<_RackFloor> {
                             ),
                             onPressed: _resetZoom,
                           ),
-                          const Divider(height: 1, indent: 4, endIndent: 4),
-                          // 2D / 3D Toggle
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              InkWell(
-                                onTap: () => setState(() => _is3dView = false),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 6,
-                                  ),
-                                  child: Text(
-                                    '2D',
-                                    style: TextStyle(
-                                      color: !_is3dView
-                                          ? c.primary
-                                          : c.textMuted,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const Text('/', style: TextStyle(fontSize: 10)),
-                              InkWell(
-                                onTap: () => setState(() => _is3dView = true),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 6,
-                                  ),
-                                  child: Text(
-                                    '3D',
-                                    style: TextStyle(
-                                      color: _is3dView
-                                          ? c.primary
-                                          : c.textMuted,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ),
                   ),
 
                   // Edit Mode Toggle Button (Top Right)
-                  if (widget.canEdit)
+                  if (widget.canEdit && _readWarning == null && !_loading)
                     Positioned(
                       top: 16,
                       right: 16,
@@ -1257,7 +1535,6 @@ class _RackFloorState extends State<_RackFloor> {
                           setState(() {
                             _editing = !_editing;
                             _placement = null;
-                            if (_editing) _is3dView = false;
                             if (!_editing) _selection = null;
                           });
                         },
@@ -1274,8 +1551,9 @@ class _RackFloorState extends State<_RackFloor> {
                   // Floating Placement Notice
                   if (_placement != null)
                     Positioned(
-                      top: 16,
+                      top: isDesktop ? 16 : 64,
                       left: 16,
+                      right: isDesktop ? null : 16,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -1297,12 +1575,14 @@ class _RackFloorState extends State<_RackFloor> {
                           children: [
                             Icon(_placement!.icon, size: 18, color: c.primary),
                             const SizedBox(width: 8),
-                            Text(
-                              'Đang đặt: ${_placement!.label} (Chạm sàn để đặt)',
-                              style: TextStyle(
-                                color: c.textPrimary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                            Flexible(
+                              child: Text(
+                                'Đang đặt: ${_placement!.label} · Chạm hoặc kéo theo ô',
+                                style: TextStyle(
+                                  color: c.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -1322,12 +1602,18 @@ class _RackFloorState extends State<_RackFloor> {
                       ),
                     ),
 
-                  // Selected Fixture Action Bar in Edit Mode
-                  if (_editing && selectedItem != null)
+                  // Selected fixture tools stay scrollable on narrow screens.
+                  if (_editing &&
+                      _placement == null &&
+                      _moving == null &&
+                      selectedItem != null)
                     Positioned(
-                      top: 16,
-                      left: _placement != null ? 360 : 16,
+                      bottom: 88,
+                      left: 16,
                       child: Container(
+                        constraints: BoxConstraints(
+                          maxWidth: math.max(1, _viewSize.width - 32),
+                        ),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 6,
@@ -1343,106 +1629,102 @@ class _RackFloorState extends State<_RackFloor> {
                             ),
                           ],
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              selectedItem.stockRack
-                                  ? 'Kệ ${selectedItem.rackCode}'
-                                  : selectedItem.kind.label,
-                              style: TextStyle(
-                                color: c.textPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                selectedItem.stockRack
+                                    ? selectedItem.rackTitle
+                                    : selectedItem.kind.label,
+                                style: TextStyle(
+                                  color: c.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            IconButton(
-                              tooltip: 'Xoay khối 90°',
-                              icon: const Icon(
-                                Icons.rotate_90_degrees_ccw_outlined,
-                                size: 18,
-                              ),
-                              onPressed: () {
-                                final nextRotation =
-                                    (selectedItem.rotation + 1) % 4;
-                                final b = _blockFor(selectedItem);
-                                final newCols = selectedItem.rotation.isEven
-                                    ? b.rows
-                                    : b.columns;
-                                final newRows = selectedItem.rotation.isEven
-                                    ? b.columns
-                                    : b.rows;
-                                final nextBlock = _snap(
-                                  b.column,
-                                  b.row,
-                                  newCols,
-                                  newRows,
-                                );
-                                _updateBlock(
-                                  selectedItem,
-                                  nextBlock,
-                                  layout,
-                                  rotation: nextRotation,
-                                );
-                              },
-                            ),
-                            IconButton(
-                              tooltip: 'Tăng chiều ngang',
-                              icon: const Icon(Icons.swap_horiz, size: 18),
-                              onPressed: () {
-                                final b = _blockFor(selectedItem);
-                                final nextWidth = (selectedItem.width >= 1.2
-                                    ? 1.0
-                                    : 1.2);
-                                final nextCols =
-                                    (b.columns *
-                                            (nextWidth / selectedItem.width))
-                                        .round();
-                                final nextBlock = _snap(
-                                  b.column,
-                                  b.row,
-                                  nextCols,
-                                  b.rows,
-                                );
-                                _updateBlock(
-                                  selectedItem,
-                                  nextBlock,
-                                  layout,
-                                  width: nextWidth,
-                                );
-                              },
-                            ),
-                            if (selectedItem.stockRack)
+                              const SizedBox(width: 12),
                               TextButton.icon(
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                  ),
-                                ),
-                                onPressed: () =>
-                                    widget.onAssignRack(selectedItem.rackCode),
+                                label: const Text('Xoay'),
                                 icon: const Icon(
-                                  Icons.add_location_alt_outlined,
-                                  size: 16,
+                                  Icons.rotate_90_degrees_ccw_outlined,
+                                  size: 18,
                                 ),
-                                label: const Text('Gắn sản phẩm'),
+                                onPressed: () {
+                                  final nextRotation =
+                                      (selectedItem.rotation + 1) % 4;
+                                  final b = _blockFor(selectedItem);
+                                  final newCols = b.rows;
+                                  final newRows = b.columns;
+                                  final nextBlock = _snap(
+                                    b.column,
+                                    b.row,
+                                    newCols,
+                                    newRows,
+                                  );
+                                  _updateBlock(
+                                    selectedItem,
+                                    nextBlock,
+                                    layout,
+                                    rotation: nextRotation,
+                                  );
+                                },
                               ),
-                            IconButton(
-                              tooltip: 'Bỏ khối khỏi mặt bằng',
-                              icon: const Icon(
-                                Icons.delete_outline,
-                                size: 18,
-                                color: Colors.red,
+                              TextButton.icon(
+                                onPressed: () => _editRack(selectedItem),
+                                icon: const Icon(Icons.edit_outlined, size: 16),
+                                label: const Text('Kích thước và thông tin'),
                               ),
-                              onPressed: () {
-                                final next = Map<String, _FloorObject>.from(
-                                  _objects,
-                                )..remove(selectedItem.id);
-                                _save(next, null);
-                              },
-                            ),
-                          ],
+                              if (selectedItem.stockRack) ...[
+                                TextButton.icon(
+                                  onPressed: () => _showMobileInspectionSheet(
+                                    selectedItem.rackCode,
+                                    c,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.list_alt_outlined,
+                                    size: 16,
+                                  ),
+                                  label: const Text('Chi tiết kệ'),
+                                ),
+                                TextButton.icon(
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
+                                  ),
+                                  onPressed: () => widget.onAssignRack(
+                                    selectedItem.rackCode,
+                                    null,
+                                    null,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.add_location_alt_outlined,
+                                    size: 16,
+                                  ),
+                                  label: const Text('Gắn sản phẩm'),
+                                ),
+                              ],
+                              if (!widget.racks.containsKey(
+                                selectedItem.rackCode,
+                              ))
+                                IconButton(
+                                  tooltip: 'Bỏ khối khỏi mặt bằng',
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 18,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () {
+                                    final next = Map<String, _FloorObject>.from(
+                                      _objects,
+                                    )..remove(selectedItem.id);
+                                    _save(next, null);
+                                  },
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -1478,21 +1760,44 @@ class _RackFloorState extends State<_RackFloor> {
                                 IconButton(
                                   tooltip: 'Hoàn tác',
                                   icon: const Icon(Icons.undo, size: 20),
-                                  onPressed: () =>
-                                      _save(_undo!.objects, null, undo: true),
+                                  onPressed: () => _save(
+                                    _undo!.objects,
+                                    null,
+                                    undo: true,
+                                    extraColumns: _undo!.columns,
+                                    extraRows: _undo!.rows,
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
                               ],
-                              for (final kind in const [
-                                _FixtureKind.rack,
-                                _FixtureKind.door,
-                                _FixtureKind.aisle,
-                                _FixtureKind.receiving,
-                                _FixtureKind.dispatch,
-                                _FixtureKind.wall,
-                                _FixtureKind.pallet,
-                                _FixtureKind.bulk,
-                              ])
+                              TextButton.icon(
+                                label: const Text('+5 cột'),
+                                icon: const Icon(Icons.view_column_outlined),
+                                onPressed: _columns >= _maxGridSize
+                                    ? null
+                                    : () => _save(
+                                        _objects,
+                                        _selection,
+                                        extraColumns: math.min(
+                                          _extraColumns + 5,
+                                          _maxGridSize - _baseColumns,
+                                        ),
+                                      ),
+                              ),
+                              TextButton.icon(
+                                label: const Text('+5 hàng'),
+                                icon: const Icon(Icons.table_rows_outlined),
+                                onPressed: _rows >= _maxGridSize
+                                    ? null
+                                    : () => _save(
+                                        _objects,
+                                        _selection,
+                                        extraRows:
+                                            math.min(_rows + 5, _maxGridSize) -
+                                            _baseRows,
+                                      ),
+                              ),
+                              for (final kind in _FixtureKind.values)
                                 Padding(
                                   padding: const EdgeInsets.only(right: 8),
                                   child: _buildFixtureToolButton(kind, c),
@@ -1506,6 +1811,68 @@ class _RackFloorState extends State<_RackFloor> {
               ),
             ),
 
+            if (directory)
+              Container(
+                width: 280,
+                decoration: BoxDecoration(
+                  border: Border(left: BorderSide(color: c.divider)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
+                      child: Text(
+                        'Tra cứu theo kệ',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView(
+                        children: [
+                          for (final entry in widget.racks.entries)
+                            if (widget.searchQuery.isEmpty ||
+                                widget.matchingRacks.contains(entry.key))
+                              ListTile(
+                                leading: Icon(Icons.shelves, color: c.primary),
+                                title: Text(
+                                  layout['stock:${entry.key}']
+                                              ?.name
+                                              .isNotEmpty ==
+                                          true
+                                      ? layout['stock:${entry.key}']!.rackTitle
+                                      : entry.key,
+                                ),
+                                subtitle: Text(
+                                  entry.value.first['productName']
+                                          ?.toString() ??
+                                      '',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                trailing: const Icon(
+                                  Icons.chevron_right,
+                                  size: 18,
+                                ),
+                                onTap: () {
+                                  setState(() {
+                                    _selection = 'stock:${entry.key}';
+                                    _inspectionLevel = null;
+                                    _inspectionBin = null;
+                                  });
+                                  WidgetsBinding.instance.addPostFrameCallback((
+                                    _,
+                                  ) {
+                                    if (mounted) _revealRack(entry.key);
+                                  });
+                                },
+                              ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             // Desktop Docked Inspection Panel (Only when not in edit mode)
             if (isDesktop &&
                 !_editing &&
@@ -1524,12 +1891,169 @@ class _RackFloorState extends State<_RackFloor> {
         );
       },
     );
+    final warning = _readWarning;
+    if (warning == null) return floor;
+    return Column(
+      children: [
+        Material(
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_outlined, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text('$warning Bố trí đang ở chế độ chỉ xem.')),
+                if (_damagedSource == null)
+                  TextButton(onPressed: _load, child: const Text('Thử lại'))
+                else if (widget.canEdit)
+                  TextButton(
+                    onPressed: _saving ? null : _recoverFloor,
+                    child: const Text('Khôi phục'),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        Expanded(child: floor),
+      ],
+    );
+  }
+
+  Future<void> _editRack(_FloorObject rack) async {
+    final form = GlobalKey<FormState>();
+    var name = rack.name;
+    var note = rack.note;
+    var block = _blockFor(rack);
+    if (block.row + block.rows > _maxSavedRows) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đưa kệ lên gần đầu mặt bằng để chỉnh sửa.'),
+        ),
+      );
+      return;
+    }
+    final layout = _effectiveLayout();
+    String? dimensionError(String? value, bool horizontal) {
+      final size = int.tryParse(value?.trim() ?? '');
+      final max = horizontal
+          ? _columns - block.column
+          : math.min(_rows, _maxSavedRows) - block.row;
+      if (size == null || size < 1 || size > max) return 'Nhập từ 1 đến $max ô';
+      return null;
+    }
+
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          rack.stockRack
+              ? 'Thông tin và kích thước'
+              : 'Kích thước ${rack.kind.label.toLowerCase()}',
+        ),
+        scrollable: true,
+        content: Form(
+          key: form,
+          child: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (rack.stockRack)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.shelves),
+                    title: Text(rack.rackTitle),
+                    trailing: Text(rack.rackCode),
+                    subtitle: const Text('Mã kệ dùng để gắn vị trí hàng'),
+                  ),
+                Row(
+                  children: [
+                    for (final horizontal in [true, false]) ...[
+                      if (!horizontal) const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          initialValue:
+                              '${horizontal ? block.columns : block.rows}',
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: horizontal ? 'Chiều rộng' : 'Chiều sâu',
+                            suffixText: 'ô',
+                          ),
+                          validator: (value) =>
+                              dimensionError(value, horizontal),
+                          onSaved: (value) {
+                            final size = int.parse(value!.trim());
+                            block = (
+                              column: block.column,
+                              row: block.row,
+                              columns: horizontal ? size : block.columns,
+                              rows: horizontal ? block.rows : size,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (rack.stockRack) ...[
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    initialValue: name,
+                    maxLength: 48,
+                    decoration: const InputDecoration(
+                      labelText: 'Tên hiển thị',
+                    ),
+                    onSaved: (value) => name = value?.trim() ?? '',
+                  ),
+                  TextFormField(
+                    initialValue: note,
+                    maxLength: 160,
+                    maxLines: 2,
+                    decoration: const InputDecoration(labelText: 'Ghi chú kệ'),
+                    onSaved: (value) => note = value?.trim() ?? '',
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (!form.currentState!.validate()) return;
+              form.currentState!.save();
+              Navigator.pop(dialogContext, true);
+            },
+            child: const Text('Lưu thông tin kệ'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || save != true) return;
+    if (_overlaps(block, rack.id, layout)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kích thước mới chồng lên khối khác.')),
+      );
+      return;
+    }
+    await _save({
+      ..._objects,
+      rack.id: rack.copyWith(name: name, note: note, block: block),
+    }, rack.id);
   }
 
   Widget _buildFixtureToolButton(_FixtureKind kind, AppThemeColors c) {
     final active = _placement == kind;
     void onTap() {
-      setState(() => _placement = active ? null : kind);
+      setState(() {
+        _placement = active ? null : kind;
+        _selection = null;
+      });
     }
 
     final buttonWidget = OutlinedButton.icon(
@@ -1544,7 +2068,7 @@ class _RackFloorState extends State<_RackFloor> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       onPressed: onTap,
-      icon: Icon(kind.icon, size: 16),
+      icon: _fixtureThumbnail(kind),
       label: Text(
         kind.label,
         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
@@ -1585,7 +2109,7 @@ class _RackFloorState extends State<_RackFloor> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(kind.icon, size: 16, color: c.primary),
+                _fixtureThumbnail(kind),
                 const SizedBox(width: 8),
                 Text(
                   kind.label,
@@ -1603,225 +2127,35 @@ class _RackFloorState extends State<_RackFloor> {
     );
   }
 
+  Widget _fixtureThumbnail(_FixtureKind kind) {
+    return Image.asset(
+      kind.assetPath(),
+      width: 30,
+      height: 22,
+      fit: BoxFit.contain,
+      excludeFromSemantics: true,
+    );
+  }
+
   Widget _buildFloorSurface(
     Map<String, _FloorObject> layout,
     AppThemeColors c,
     bool isDesktop,
   ) {
-    Widget floorCanvas = CustomPaint(
+    return CustomPaint(
       painter: _WarehouseFloorPainter(
         columns: _columns,
         rows: _rows,
         cellSize: _cellSize,
         themeColors: c,
-        is3d: _is3dView,
+        showCoordinates: _editing,
       ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           for (final item in layout.values)
             _buildTile(item, layout, c, isDesktop),
-          if (_is3dView) _buildForkliftVisual(c),
         ],
-      ),
-    );
-
-    if (_is3dView) {
-      floorCanvas = AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        transformAlignment: Alignment.center,
-        transform: Matrix4.identity()
-          ..setEntry(3, 2, 0.0006)
-          ..rotateX(46 * math.pi / 180)
-          ..rotateZ(-36 * math.pi / 180),
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 40,
-              offset: const Offset(-20, 30),
-            ),
-          ],
-        ),
-        child: floorCanvas,
-      );
-    }
-
-    return floorCanvas;
-  }
-
-  Widget _buildForkliftVisual(AppThemeColors c) {
-    double x = 2 * _cellSize;
-    double y = (_rows - 3).clamp(1, _rows - 2) * _cellSize;
-
-    final aisle = _objects.values
-        .where(
-          (o) =>
-              o.kind == _FixtureKind.aisle || o.kind == _FixtureKind.receiving,
-        )
-        .firstOrNull;
-    if (aisle != null && aisle.block != null) {
-      x = aisle.block!.column * _cellSize + 4;
-      y = aisle.block!.row * _cellSize - 8;
-    }
-
-    return Positioned(
-      left: x,
-      top: y,
-      child: IgnorePointer(
-        ignoring: true,
-        child: SizedBox(
-          width: _cellSize * 2.2,
-          height: _cellSize * 1.4,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Shadow
-              Positioned(
-                left: 6,
-                bottom: 2,
-                width: 50,
-                height: 10,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.28),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-              // Body
-              Positioned(
-                left: 6,
-                bottom: 6,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // Cab & Engine
-                    Container(
-                      width: 32,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEAB308), // OSHA yellow
-                        borderRadius: BorderRadius.circular(5),
-                        border: Border.all(
-                          color: const Color(0xFFCA8A04),
-                          width: 1.2,
-                        ),
-                      ),
-                      child: Stack(
-                        children: [
-                          // ROPS cage
-                          Positioned(
-                            top: 2,
-                            left: 3,
-                            right: 6,
-                            height: 12,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF1E293B),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                              child: Center(
-                                child: Container(
-                                  width: 10,
-                                  height: 6,
-                                  color: Colors.lightBlueAccent.withValues(
-                                    alpha: 0.5,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          // Amber beacon
-                          Positioned(
-                            top: -2,
-                            left: 6,
-                            child: Container(
-                              width: 4,
-                              height: 4,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFF97316),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                          // Wheels
-                          Positioned(
-                            bottom: -3,
-                            left: 3,
-                            child: Container(
-                              width: 8,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0F172A),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: -3,
-                            right: 3,
-                            child: Container(
-                              width: 7,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0F172A),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    // Mast beam
-                    Container(
-                      width: 4,
-                      height: 30,
-                      color: const Color(0xFF334155),
-                    ),
-                    // Pallet & Cargo box
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 16,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD97706),
-                            borderRadius: BorderRadius.circular(2),
-                            border: Border.all(
-                              color: const Color(0xFF92400E),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Center(
-                            child: Container(
-                              width: 4,
-                              height: 3,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          width: 18,
-                          height: 3,
-                          color: const Color(0xFFB45309), // Pallet
-                        ),
-                        Container(
-                          width: 16,
-                          height: 2,
-                          color: const Color(0xFF64748B), // Forks
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -1841,25 +2175,96 @@ class _RackFloorState extends State<_RackFloor> {
         : const <Map<String, dynamic>>[];
     final isSearchMatch = isRack && widget.matchingRacks.contains(rackCode);
 
-    Widget content;
-    if (isRack) {
-      content = _buildRackVisual(
-        rackCode,
-        positions,
-        isSelected,
-        isSearchMatch,
-        c,
-      );
-    } else {
-      content = _buildFixtureVisual(item.kind, isSelected, c, rows: block.rows);
-    }
+    final asset = item.kind.assetPath(occupied: positions.isNotEmpty);
+    final vertical = block.rows == block.columns
+        ? item.rotation.isOdd
+        : block.rows > block.columns;
+    final highlighted = isSelected || isSearchMatch;
+    final label = isRack ? item.rackTitle : item.kind.label;
+    final content = Tooltip(
+      message: _editing
+          ? '$label · Kéo để di chuyển'
+          : isRack
+          ? '$label · ${positions.length} mặt hàng · Mở chi tiết'
+          : label,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          border: highlighted ? Border.all(color: c.primary, width: 2) : null,
+          color: highlighted ? c.primarySubtle : null,
+        ),
+        child: LayoutBuilder(
+          builder: (context, size) {
+            final compact = size.maxHeight < 50 || size.maxWidth < 68;
+            final inset = highlighted ? 4.0 : 2.0;
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    inset,
+                    inset,
+                    inset,
+                    compact ? inset : 18,
+                  ),
+                  child: RotatedBox(
+                    quarterTurns:
+                        (vertical ? 1 : 0) + (item.rotation >= 2 ? 2 : 0),
+                    child: Image.asset(
+                      asset,
+                      fit:
+                          item.kind == _FixtureKind.wall ||
+                              item.kind == _FixtureKind.aisle
+                          ? BoxFit.fill
+                          : BoxFit.contain,
+                      filterQuality: FilterQuality.medium,
+                      excludeFromSemantics: true,
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    constraints: BoxConstraints(maxWidth: size.maxWidth - 4),
+                    margin: const EdgeInsets.only(bottom: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3),
+                      color: highlighted ? c.primary : c.card,
+                    ),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: compact ? 9 : 11,
+                        fontWeight: FontWeight.w700,
+                        color: highlighted
+                            ? Theme.of(context).colorScheme.onPrimary
+                            : c.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
 
     Widget interactive = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        setState(() => _selection = item.id);
+        setState(() {
+          _selection = item.id;
+          _inspectionLevel = null;
+          _inspectionBin = null;
+        });
         if (isRack) {
-          widget.onSelectRack(rackCode);
           if (!isDesktop && !_editing) {
             _showMobileInspectionSheet(rackCode, c);
           }
@@ -1871,325 +2276,53 @@ class _RackFloorState extends State<_RackFloor> {
     if (_editing) {
       interactive = Draggable<_SceneDrag>(
         data: (id: item.id, kind: null),
-        dragAnchorStrategy: pointerDragAnchorStrategy,
-        feedback: Material(
-          color: Colors.transparent,
-          child: Opacity(
-            opacity: 0.8,
-            child: SizedBox(
-              width: block.columns * _cellSize,
-              height: block.rows * _cellSize,
-              child: content,
-            ),
-          ),
-        ),
+        maxSimultaneousDrags: _saving || _loading || _moving != null ? 0 : 1,
+        dragAnchorStrategy: (_, _, global) {
+          final origin = Offset(
+            block.column * _cellSize,
+            block.row * _cellSize,
+          );
+          _moving = (
+            id: item.id,
+            grab: (_floorPoint(global) ?? origin) - origin,
+          );
+          return Offset.zero;
+        },
+        feedback: const SizedBox.shrink(),
+        onDragStarted: () {
+          setState(() {
+            _selection = item.id;
+            _inspectionLevel = null;
+            _inspectionBin = null;
+          });
+          _edgePanTimer = Timer.periodic(
+            const Duration(milliseconds: 16),
+            (_) => _panWhileDragging(item, layout),
+          );
+        },
+        onDragUpdate: (details) => _dragPointer = details.globalPosition,
+        onDragEnd: (_) {
+          _edgePanTimer?.cancel();
+          _dragPointer = null;
+          setState(() {
+            _moving = null;
+            _preview = null;
+          });
+        },
         childWhenDragging: Opacity(opacity: 0.25, child: content),
-        child: interactive,
+        child: MouseRegion(cursor: SystemMouseCursors.grab, child: interactive),
       );
     }
 
     return Positioned(
+      key: ValueKey(item.id),
       left: block.column * _cellSize,
       top: block.row * _cellSize,
       width: block.columns * _cellSize,
       height: block.rows * _cellSize,
-      child: interactive,
-    );
-  }
-
-  Widget _buildRackVisual(
-    String rackCode,
-    List<Map<String, dynamic>> positions,
-    bool isSelected,
-    bool isSearchMatch,
-    AppThemeColors c,
-  ) {
-    final hasStock = positions.isNotEmpty;
-    final steelColor = isSelected
-        ? c.primary
-        : (hasStock ? const Color(0xFF2563EB) : const Color(0xFF64748B));
-    final beamColor = isSelected ? c.primary : const Color(0xFFEA580C);
-
-    final borderColor = isSelected
-        ? c.primary
-        : isSearchMatch
-        ? Colors.amber.shade700
-        : hasStock
-        ? c.primary.withValues(alpha: 0.6)
-        : c.divider;
-
-    final bgColor = isSelected
-        ? c.primarySubtle
-        : isSearchMatch
-        ? Colors.amber.shade50
-        : hasStock
-        ? c.card
-        : c.cardAlt;
-
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: borderColor,
-          width: isSelected || isSearchMatch ? 2.2 : 1.2,
-        ),
-        boxShadow: [
-          if (isSelected || isSearchMatch)
-            BoxShadow(
-              color: (isSelected ? c.primary : Colors.amber).withValues(
-                alpha: 0.25,
-              ),
-              blurRadius: 8,
-              spreadRadius: 1,
-            ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Left upright steel frame
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 4,
-            child: Container(
-              decoration: BoxDecoration(
-                color: steelColor.withValues(alpha: 0.8),
-                borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(5),
-                ),
-              ),
-            ),
-          ),
-          // Right upright steel frame
-          Positioned(
-            right: 0,
-            top: 0,
-            bottom: 0,
-            width: 4,
-            child: Container(
-              decoration: BoxDecoration(
-                color: steelColor.withValues(alpha: 0.8),
-                borderRadius: const BorderRadius.horizontal(
-                  right: Radius.circular(5),
-                ),
-              ),
-            ),
-          ),
-          // Content
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Header: Rack Name & Count Badge
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Kệ $rackCode',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? c.primary : c.textPrimary,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1.5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: hasStock
-                            ? Colors.teal.shade700
-                            : c.textMuted.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        hasStock ? '${positions.length} SP' : 'Trống',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: hasStock ? Colors.white : c.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Industrial Shelf Bays with Cargo Boxes / Pallets
-                Container(
-                  height: 14,
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: beamColor.withValues(alpha: 0.7),
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    children: List.generate(4, (index) {
-                      final isSlotOccupied = index < positions.length;
-                      final isMatch =
-                          isSlotOccupied &&
-                          widget.searchQuery.isNotEmpty &&
-                          ('${positions[index]['productName']} ${positions[index]['sku']}')
-                              .toLowerCase()
-                              .contains(widget.searchQuery);
-
-                      return Expanded(
-                        child: Container(
-                          margin: EdgeInsets.only(right: index < 3 ? 2 : 0),
-                          alignment: Alignment.bottomCenter,
-                          child: isSlotOccupied
-                              ? Container(
-                                  height: 11,
-                                  decoration: BoxDecoration(
-                                    color: isMatch
-                                        ? Colors.amber.shade400
-                                        : const Color(0xFFD97706),
-                                    borderRadius: BorderRadius.circular(1.5),
-                                    border: Border.all(
-                                      color: isMatch
-                                          ? Colors.amber.shade800
-                                          : const Color(0xFF92400E),
-                                      width: 0.8,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Container(
-                                      width: 3,
-                                      height: 2,
-                                      color: Colors.white.withValues(
-                                        alpha: 0.8,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : Container(
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: c.divider.withValues(alpha: 0.5),
-                                      width: 0.8,
-                                    ),
-                                    borderRadius: BorderRadius.circular(1),
-                                  ),
-                                ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-
-                // Footer Summary
-                Text(
-                  hasStock ? '${positions.length} mặt hàng' : 'Chưa có hàng',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: hasStock ? c.textSecondary : c.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFixtureVisual(
-    _FixtureKind kind,
-    bool isSelected,
-    AppThemeColors c, {
-    int rows = 1,
-  }) {
-    Color accentColor;
-    Color fillColor;
-
-    switch (kind) {
-      case _FixtureKind.door:
-        accentColor = Colors.purple.shade600;
-        fillColor = Colors.purple.shade50;
-      case _FixtureKind.receiving:
-        accentColor = Colors.blue.shade600;
-        fillColor = Colors.blue.shade50;
-      case _FixtureKind.dispatch:
-        accentColor = Colors.orange.shade600;
-        fillColor = Colors.orange.shade50;
-      case _FixtureKind.wall:
-        accentColor = Colors.blueGrey.shade700;
-        fillColor = Colors.blueGrey.shade100;
-      case _FixtureKind.aisle:
-        accentColor = Colors.grey.shade600;
-        fillColor = Colors.grey.shade100;
-      case _FixtureKind.pallet || _FixtureKind.bulk:
-        accentColor = Colors.amber.shade700;
-        fillColor = Colors.amber.shade50;
-      default:
-        accentColor = c.textMuted;
-        fillColor = c.cardAlt;
-    }
-
-    final isHorizontal = rows <= 1;
-
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: fillColor,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: isSelected ? c.primary : accentColor.withValues(alpha: 0.6),
-          width: isSelected ? 2.0 : 1.0,
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      child: Center(
-        child: isHorizontal
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(kind.icon, size: 14, color: accentColor),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      kind.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: accentColor,
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(kind.icon, size: 18, color: accentColor),
-                  const SizedBox(height: 2),
-                  Flexible(
-                    child: Text(
-                      kind.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: accentColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+      child: Opacity(
+        opacity: widget.searchQuery.isNotEmpty && !isSearchMatch ? .28 : 1,
+        child: interactive,
       ),
     );
   }
@@ -2201,275 +2334,61 @@ class _RackFloorState extends State<_RackFloor> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) =>
-          SizedBox(height: 480, child: _buildInspectionContent(rackCode, c)),
+      isScrollControlled: true,
+      builder: (sheetContext) => FractionallySizedBox(
+        heightFactor: .82,
+        child: StatefulBuilder(
+          builder: (_, refresh) => _buildInspectionContent(
+            rackCode,
+            c,
+            refresh: refresh,
+            close: () => Navigator.pop(sheetContext),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildRackElevationDiagram(
+  int? _inspectionLevel;
+  int? _inspectionBin;
+  Widget _buildInspectionContent(
     String rackCode,
-    List<Map<String, dynamic>> positions,
-    AppThemeColors c,
-  ) {
-    const totalLevels = 3;
-    const totalBins = 3;
-    const slotTotal = totalLevels * totalBins;
-
-    final slotMap = <String, Map<String, dynamic>>{};
-    for (final p in positions) {
-      final lvl = (p['level'] as num?)?.toInt() ?? 1;
-      final bin = (p['bin'] as num?)?.toInt() ?? 1;
-      slotMap['$lvl-$bin'] = p;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: c.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.view_in_ar_outlined,
-                      size: 15,
-                      color: Color(0xFF2563EB),
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        'MẶT DỰNG KỆ 3D (RACK ELEVATION)',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                          color: c.textPrimary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: positions.isEmpty
-                      ? c.divider.withValues(alpha: 0.3)
-                      : Colors.teal.shade50,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: positions.isEmpty ? c.divider : Colors.teal.shade300,
-                  ),
-                ),
-                child: Text(
-                  'Lấp đầy: ${positions.length}/$slotTotal ô (${(positions.length / slotTotal * 100).toStringAsFixed(0)}%)',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: positions.isEmpty
-                        ? c.textMuted
-                        : Colors.teal.shade800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Khung thép Pallet Rack 3 tầng
-          Container(
-            height: 120,
-            decoration: BoxDecoration(
-              color: c.surface,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: const Color(0xFF1E40AF), width: 1.5),
-            ),
-            child: Stack(
-              children: [
-                // Cột thép trái
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: 6,
-                  child: Container(color: const Color(0xFF1E40AF)),
-                ),
-                // Cột thép phải
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: 6,
-                  child: Container(color: const Color(0xFF1E40AF)),
-                ),
-                // 3 tầng T3 -> T1
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  child: Column(
-                    children: [
-                      for (int lvl = totalLevels; lvl >= 1; lvl--) ...[
-                        Expanded(
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 22,
-                                child: Text(
-                                  'T$lvl',
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1E40AF),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    for (
-                                      int bin = 1;
-                                      bin <= totalBins;
-                                      bin++
-                                    ) ...[
-                                      if (bin > 1) const SizedBox(width: 4),
-                                      Expanded(
-                                        child: _buildBaySlot(
-                                          slotMap['$lvl-$bin'],
-                                          lvl,
-                                          bin,
-                                          rackCode,
-                                          c,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Thanh dầm cam OSHA
-                        Container(
-                          margin: const EdgeInsets.only(
-                            left: 22,
-                            top: 1,
-                            bottom: 2,
-                          ),
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEA580C),
-                            borderRadius: BorderRadius.circular(1),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBaySlot(
-    Map<String, dynamic>? slotItem,
-    int level,
-    int bin,
-    String rackCode,
-    AppThemeColors c,
-  ) {
-    final hasItem = slotItem != null;
-
-    if (hasItem) {
-      return Tooltip(
-        message:
-            'Tầng $level · Ô $bin: ${slotItem['productName']} (SKU: ${slotItem['sku']})',
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFFEF3C7),
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(color: const Color(0xFFD97706), width: 0.8),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 14,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD97706),
-                      borderRadius: BorderRadius.circular(1.5),
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 4,
-                        height: 2,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                slotItem['sku']?.toString() ?? 'SP',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF92400E),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return InkWell(
-      onTap: widget.canEdit ? () => widget.onAssignRack(rackCode) : null,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(3),
-          border: Border.all(
-            color: c.divider.withValues(alpha: 0.6),
-            width: 0.6,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            'Ô $bin',
-            style: TextStyle(
-              fontSize: 8,
-              color: c.textMuted.withValues(alpha: 0.7),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInspectionContent(String rackCode, AppThemeColors c) {
+    AppThemeColors c, {
+    StateSetter? refresh,
+    VoidCallback? close,
+  }) {
     final positions = widget.racks[rackCode] ?? [];
+    final rack = _effectiveLayout()['stock:$rackCode'];
 
+    final levels = positions.map((row) => row['level'] as int).toSet().toList()
+      ..sort();
+    final level = levels.contains(_inspectionLevel)
+        ? _inspectionLevel
+        : levels.firstOrNull;
+    void assign() {
+      close?.call();
+      widget.onAssignRack(rackCode, level, _inspectionBin);
+    }
+
+    final onLevel = positions.where((row) => row['level'] == level).toList();
+    final lastBin = onLevel.fold<int>(
+      4,
+      (max, row) => math.max(max, row['bin'] as int),
+    );
+    final visible =
+        positions
+            .where(
+              (row) =>
+                  (level == null || row['level'] == level) &&
+                  (_inspectionBin == null || row['bin'] == _inspectionBin),
+            )
+            .toList()
+          ..sort((a, b) {
+            final byLevel = (a['level'] as int).compareTo(b['level'] as int);
+            return byLevel != 0
+                ? byLevel
+                : (a['bin'] as int).compareTo(b['bin'] as int);
+          });
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -2479,29 +2398,44 @@ class _RackFloorState extends State<_RackFloor> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Kệ $rackCode',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: c.textPrimary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      rack?.rackTitle ?? 'Kệ $rackCode',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: c.textPrimary,
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Kho: ${widget.warehouseName}',
-                    style: TextStyle(fontSize: 13, color: c.textSecondary),
-                  ),
-                ],
+                    Text(
+                      rack?.rackTitle == 'Kệ $rackCode'
+                          ? warehouseDisplayName(widget.warehouseName)
+                          : '$rackCode · ${warehouseDisplayName(widget.warehouseName)}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, color: c.textSecondary),
+                    ),
+                  ],
+                ),
               ),
+              if (widget.canEdit && _readWarning == null && rack != null)
+                IconButton(
+                  tooltip: 'Sửa thông tin kệ',
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () {
+                    close?.call();
+                    _editRack(rack);
+                  },
+                ),
               IconButton(
+                tooltip: 'Đóng chi tiết kệ',
                 icon: const Icon(Icons.close),
                 onPressed: () {
                   setState(() => _selection = null);
-                  widget.onSelectRack(null);
-                  if (Navigator.canPop(context)) Navigator.maybePop(context);
+                  close?.call();
                 },
               ),
             ],
@@ -2509,78 +2443,94 @@ class _RackFloorState extends State<_RackFloor> {
         ),
         const Divider(height: 1),
 
-        // Quick Stats
+        if (rack != null && rack.note.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text(
+              rack.note,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+
         Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: c.cardAlt,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '${positions.length}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: c.primary,
-                        ),
-                      ),
-                      Text(
-                        'Mặt hàng',
-                        style: TextStyle(fontSize: 12, color: c.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: c.cardAlt,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        positions.isEmpty
-                            ? '0'
-                            : '${positions.map((p) => p['level']).toSet().length}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: c.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        'Số tầng dùng',
-                        style: TextStyle(fontSize: 12, color: c.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Text(
+            '${positions.length} mặt hàng · ${levels.length} tầng có hàng',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: c.textSecondary,
+            ),
           ),
         ),
 
-        // 3D Multi-tier Rack Elevation Diagram
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: _buildRackElevationDiagram(rackCode, positions, c),
-        ),
+        if (levels.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final value in levels)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text('Tầng $value'),
+                        selected: level == value,
+                        onSelected: (_) => (refresh ?? setState)(() {
+                          _inspectionLevel = value;
+                          _inspectionBin = null;
+                        }),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
         const SizedBox(height: 8),
-
+        if (level != null)
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: c.cardAlt,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: c.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Vị trí trên tầng $level',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: c.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (var bin = 1; bin <= lastBin; bin++)
+                        _buildBinPreview(
+                          c,
+                          bin,
+                          onLevel.where((row) => row['bin'] == bin).toList(),
+                          () => (refresh ?? setState)(() {
+                            _inspectionBin = _inspectionBin == bin ? null : bin;
+                          }),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         // Products List
         Expanded(
-          child: positions.isEmpty
+          child: visible.isEmpty
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -2588,83 +2538,89 @@ class _RackFloorState extends State<_RackFloor> {
                       Icon(Icons.inbox_outlined, size: 40, color: c.textMuted),
                       const SizedBox(height: 8),
                       Text(
-                        'Kệ này chưa có hàng.',
+                        positions.isEmpty
+                            ? 'Vị trí này chưa có hàng.'
+                            : 'Ô này chưa có hàng.',
                         style: TextStyle(color: c.textMuted, fontSize: 14),
                       ),
                     ],
                   ),
                 )
               : ListView.separated(
+                  key: ValueKey((rackCode, level, _inspectionBin)),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  itemCount: positions.length,
+                  itemCount: visible.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
-                    final item = positions[index];
-                    return Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: c.card,
+                    final item = visible[index];
+                    final id = (item['productId'] as num?)?.toInt();
+                    final openProduct = widget.onOpenProduct;
+                    return Material(
+                      color: c.card,
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: c.divider),
+                        side: BorderSide(color: c.divider),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item['productName'] as String? ?? 'Sản phẩm',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: c.textPrimary,
+                      child: ListTile(
+                        leading: _productImage(item, 44),
+                        title: Text(
+                          item['productName'] as String? ?? 'Sản phẩm',
+                        ),
+                        subtitle: Text(
+                          "${item['sku'] ?? '—'} · Tầng ${item['level']} · Ô ${item['bin']}",
+                        ),
+                        onTap: () {
+                          showDialog<void>(
+                            context: context,
+                            builder: (dialogContext) => AlertDialog(
+                              title: Text(
+                                item['productName'] as String? ?? 'Sản phẩm',
+                              ),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _productImage(item, 92),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    "Mã sản phẩm: ${item['sku'] ?? '—'}\n"
+                                    "Kho: ${warehouseDisplayName(widget.warehouseName)}\n"
+                                    "Vị trí: Kệ $rackCode · Tầng ${item['level']} · Ô ${item['bin']}",
                                   ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogContext),
+                                  child: const Text('Đóng'),
                                 ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: c.cardAlt,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        'SKU: ${item['sku'] ?? 'N/A'}',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: c.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Tầng ${item['level'] ?? 1} · Ô ${item['bin'] ?? 1}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: c.primary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                if (openProduct != null && id != null)
+                                  FilledButton(
+                                    onPressed: () {
+                                      Navigator.pop(dialogContext);
+                                      close?.call();
+                                      openProduct(id);
+                                    },
+                                    child: const Text('Mở hồ sơ sản phẩm'),
+                                  ),
                               ],
                             ),
-                          ),
-                          if (widget.canEdit)
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 18),
-                              onPressed: () => widget.onAssignRack(rackCode),
-                            ),
-                        ],
+                          );
+                        },
+                        trailing: widget.canEdit
+                            ? IconButton(
+                                tooltip: 'Sửa vị trí sản phẩm',
+                                icon: const Icon(
+                                  Icons.edit_location_alt_outlined,
+                                ),
+                                onPressed: () {
+                                  close?.call();
+                                  widget.onEditPosition(item);
+                                },
+                              )
+                            : const Icon(Icons.chevron_right),
                       ),
                     );
                   },
@@ -2684,12 +2640,71 @@ class _RackFloorState extends State<_RackFloor> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              onPressed: () => widget.onAssignRack(rackCode),
+              onPressed: assign,
               icon: const Icon(Icons.add, size: 18),
-              label: const Text('Gắn sản phẩm'),
+              label: Text(
+                _inspectionBin == null
+                    ? 'Gắn sản phẩm'
+                    : 'Gắn sản phẩm vào ô $_inspectionBin',
+              ),
             ),
           ),
       ],
+    );
+  }
+
+  Widget _productImage(
+    Map<String, dynamic> item,
+    double size,
+  ) => ProductThumbnail(
+    // Recreate the web image view when a tier or bin displays a different item.
+    key: ValueKey((item['productId'] as int?, item['imageUrl'] as String?)),
+    imageUrl: item['imageUrl'] as String?,
+    name: item['productName'] as String?,
+    size: size,
+  );
+
+  Widget _buildBinPreview(
+    AppThemeColors colors,
+    int bin,
+    List<Map<String, dynamic>> items,
+    VoidCallback onTap,
+  ) {
+    final selected = _inspectionBin == bin;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: Material(
+        color: selected ? colors.primarySubtle : colors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: selected ? colors.primary : colors.divider),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            width: 72,
+            height: 94,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Ô $bin',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                if (items.isNotEmpty)
+                  _productImage(items.first, 40)
+                else
+                  Icon(Icons.inbox_outlined, color: colors.textMuted, size: 26),
+                Text(
+                  items.isEmpty ? 'Trống' : '${items.length} mặt hàng',
+                  style: TextStyle(color: colors.textSecondary, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -2700,26 +2715,35 @@ class _WarehouseFloorPainter extends CustomPainter {
     required this.rows,
     required this.cellSize,
     required this.themeColors,
-    required this.is3d,
+    required this.showCoordinates,
   });
 
   final int columns;
   final int rows;
   final double cellSize;
   final AppThemeColors themeColors;
-  final bool is3d;
+  final bool showCoordinates;
 
   @override
   void paint(Canvas canvas, Size size) {
     final floorRect = Offset.zero & size;
 
     // Floor concrete/surface background
-    final floorPaint = Paint()..color = themeColors.surface;
+    final floorPaint = Paint()
+      ..color = Color.alphaBlend(const Color(0x105c7766), themeColors.surface);
     canvas.drawRRect(
       RRect.fromRectAndRadius(floorRect, const Radius.circular(12)),
       floorPaint,
     );
 
+    final edge = Paint()
+      ..color = Color.alphaBlend(const Color(0x30426468), themeColors.surface);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(floorRect.deflate(3), const Radius.circular(9)),
+      edge
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6,
+    );
     // Outer warehouse perimeter wall (Technical double border)
     final wallPaint = Paint()
       ..color = themeColors.divider
@@ -2745,6 +2769,8 @@ class _WarehouseFloorPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
+    if (!showCoordinates) return;
+
     // Grid coordinates guides (1, 2, 3...)
     final textStyle = TextStyle(
       color: themeColors.textMuted.withValues(alpha: 0.5),
@@ -2767,77 +2793,389 @@ class _WarehouseFloorPainter extends CustomPainter {
         oldDelegate.rows != rows ||
         oldDelegate.cellSize != cellSize ||
         oldDelegate.themeColors != themeColors ||
-        oldDelegate.is3d != is3d;
+        oldDelegate.showCoordinates != showCoordinates;
   }
 }
 
 class _PositionDialog extends StatefulWidget {
-  const _PositionDialog({required this.choices, this.rackCode});
+  const _PositionDialog({
+    required this.choices,
+    required this.positions,
+    required this.racksByWarehouse,
+    this.rackCode,
+    this.initialLevel,
+    this.initialBin,
+  });
+  final int? initialLevel;
+  final int? initialBin;
   final String? rackCode;
   final List<Map<String, dynamic>> choices;
+  final List<Map<String, dynamic>> positions;
+  final Map<int, Map<String, _FloorObject?>> racksByWarehouse;
 
   @override
   State<_PositionDialog> createState() => _PositionDialogState();
 }
 
 class _PositionDialogState extends State<_PositionDialog> {
-  final _form = GlobalKey<FormState>();
-  int _selected = 0;
-  late String _rack =
-      widget.rackCode ?? (widget.choices.first['rack'] as String?) ?? '';
-  late int _level = widget.choices.first['level'] as int? ?? 1;
-  late int _bin = widget.choices.first['bin'] as int? ?? 1;
+  late int? _selected = widget.choices.first.containsKey('rack') ? 0 : null;
+  late int _warehouseId = widget.choices.first['warehouseId'] as int;
+  String _query = '';
+  bool _showAllSlots = false;
+  final _queryController = TextEditingController();
+  @override
+  void dispose() {
+    _queryController.dispose();
+    super.dispose();
+  }
+
+  late String? _rack =
+      widget.rackCode ?? widget.choices.first['rack'] as String?;
+  late int _level =
+      (widget.choices.first['level'] as int?) ?? widget.initialLevel ?? 1;
+  late int? _bin = (widget.choices.first['bin'] as int?) ?? widget.initialBin;
+
+  Map<String, dynamic>? _currentPosition(Map<String, dynamic>? product) {
+    if (product == null) return null;
+    return widget.positions
+        .where(
+          (row) =>
+              row['warehouseId'] == _warehouseId &&
+              row['productId'] == product['productId'],
+        )
+        .firstOrNull;
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = _appColors(context);
 
+    final warehouses = {
+      for (final row in widget.choices)
+        row['warehouseId'] as int: warehouseDisplayName(row['warehouseName']),
+    };
+    final editing = widget.choices.first.containsKey('rack');
+    final selected = _selected == null ? null : widget.choices[_selected!];
+    final current = _currentPosition(selected);
+    final racks = widget.racksByWarehouse[_warehouseId] ?? {};
+    final rackCode = _rack;
+    final rackSelected = rackCode != null && racks.containsKey(rackCode);
+    final rackItems = widget.positions
+        .where(
+          (row) =>
+              row['warehouseId'] == _warehouseId && row['rack'] == rackCode,
+        )
+        .toList();
+    final usedLevels = rackItems.map((row) => row['level'] as int).toSet();
+    final nextLevel = List.generate(
+      12,
+      (i) => i + 1,
+    ).where((level) => !usedLevels.contains(level)).firstOrNull;
+    final levels = _showAllSlots
+        ? List.generate(12, (i) => i + 1)
+        : ({...usedLevels, _level, ?nextLevel}.toList()..sort());
+    final onLevel = rackItems.where((row) => row['level'] == _level).toList();
+    final lastUsedBin = onLevel.fold<int>(
+      0,
+      (max, item) => math.max(max, item['bin'] as int),
+    );
+    final binCount = _showAllSlots
+        ? 16
+        : math.min(16, math.max(4, math.max(_bin ?? 1, lastUsedBin + 1)));
+    final destination = onLevel.where((row) => row['bin'] == _bin).toList();
+    final rackTitle = racks[rackCode]?.rackTitle ?? 'Kệ $rackCode';
+    final query = foldSearchText(_query);
+    final matches = widget.choices.indexed.where((entry) {
+      final product = entry.$2;
+      return product['warehouseId'] == _warehouseId &&
+          (foldSearchText(product['productName']).contains(query) ||
+              foldSearchText(product['sku']).contains(query));
+    }).toList();
+
     return AlertDialog(
-      title: const Text('Vị trí trên kệ'),
+      constraints: const BoxConstraints(maxWidth: 560),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      title: Text(editing ? 'Sửa vị trí sản phẩm' : 'Gắn sản phẩm vào kệ'),
       scrollable: true,
-      content: Form(
-        key: _form,
+      content: SizedBox(
+        width: 440,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            DropdownButtonFormField<int>(
-              initialValue: _selected,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Sản phẩm và kho'),
-              items: [
-                for (var i = 0; i < widget.choices.length; i++)
-                  DropdownMenuItem(
-                    value: i,
+            if (warehouses.length == 1)
+              Row(
+                children: [
+                  Icon(Icons.warehouse_outlined, color: c.primary, size: 19),
+                  const SizedBox(width: 8),
+                  Expanded(
                     child: Text(
-                      '${widget.choices[i]['sku']} · ${widget.choices[i]['productName']} · ${widget.choices[i]['warehouseName']}',
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13),
+                      warehouses[_warehouseId]!,
+                      style: Theme.of(context).textTheme.titleSmall,
                     ),
                   ),
-              ],
-              onChanged: (value) => setState(() => _selected = value!),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              initialValue: _rack,
-              readOnly: widget.rackCode != null,
-              maxLength: 24,
-              decoration: const InputDecoration(labelText: 'Mã kệ'),
-              validator: (value) =>
-                  value == null || value.trim().isEmpty ? 'Nhập mã kệ' : null,
-              onSaved: (value) => _rack = value!.trim(),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _numberField('Tầng', _level, 12, (v) => _level = v),
+                ],
+              )
+            else
+              DropdownButtonFormField<int>(
+                initialValue: _warehouseId,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Kho'),
+                items: [
+                  for (final w in warehouses.entries)
+                    DropdownMenuItem(
+                      value: w.key,
+                      child: Text(
+                        warehouses.values
+                                    .where((name) => name == w.value)
+                                    .length >
+                                1
+                            ? '${w.value} (#${w.key})'
+                            : w.value,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (id) {
+                  if (id != null) {
+                    setState(() {
+                      _warehouseId = id;
+                      _selected = null;
+                      _rack = null;
+                      _level = 1;
+                      _bin = null;
+                      _query = '';
+                      _queryController.clear();
+                    });
+                  }
+                },
+              ),
+            const SizedBox(height: 14),
+            if (selected == null) ...[
+              TextField(
+                controller: _queryController,
+                decoration: const InputDecoration(
+                  labelText: 'Tìm sản phẩm',
+                  hintText: 'Nhập tên hoặc mã SKU',
+                  prefixIcon: Icon(Icons.search),
                 ),
-                const SizedBox(width: 12),
-                Expanded(child: _numberField('Ô', _bin, 16, (v) => _bin = v)),
+                onChanged: (v) => setState(() => _query = v),
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                height: math.min(190.0, math.max(56.0, matches.length * 60.0)),
+                child: matches.isEmpty
+                    ? const Center(
+                        child: Text('Không tìm thấy sản phẩm trong kho này.'),
+                      )
+                    : ListView.separated(
+                        primary: false,
+                        itemCount: matches.length,
+                        separatorBuilder: (_, _) => const Divider(height: 1),
+                        itemBuilder: (_, index) {
+                          final (i, row) = matches[index];
+                          return ListTile(
+                            dense: true,
+                            title: Text(
+                              row['productName'].toString(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(row['sku'].toString()),
+                            trailing: const Icon(
+                              Icons.add_circle_outline,
+                              size: 18,
+                            ),
+                            onTap: () => setState(() {
+                              _selected = i;
+                              final existing = _currentPosition(row);
+                              if (widget.rackCode == null) {
+                                _rack = existing?['rack'] as String?;
+                                _level = existing?['level'] as int? ?? 1;
+                                _bin = existing?['bin'] as int?;
+                              }
+                            }),
+                          );
+                        },
+                      ),
+              ),
+            ] else
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: c.primarySubtle,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ListTile(
+                  leading: Icon(Icons.inventory_2_outlined, color: c.primary),
+                  title: Text(selected['productName'].toString()),
+                  subtitle: Text(selected['sku'].toString()),
+                  trailing: editing
+                      ? null
+                      : TextButton(
+                          onPressed: () => setState(() => _selected = null),
+                          child: const Text('Đổi'),
+                        ),
+                ),
+              ),
+            if (selected != null) ...[
+              const SizedBox(height: 14),
+              if (current != null) ...[
+                Text(
+                  "Đang lưu tại kệ ${current['rack']} · Tầng ${current['level']} · Ô ${current['bin']}",
+                  style: TextStyle(color: c.textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: 10),
               ],
-            ),
+              DropdownButtonFormField<String>(
+                key: ValueKey((_warehouseId, rackCode)),
+                initialValue: rackSelected ? rackCode : null,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Kệ hoặc thiết bị lưu trữ',
+                  prefixIcon: Icon(Icons.shelves),
+                ),
+                hint: Text(
+                  racks.isEmpty
+                      ? 'Kho chưa có kệ trên mặt bằng'
+                      : 'Chọn kệ trên mặt bằng',
+                ),
+                items: [
+                  for (final entry in racks.entries)
+                    DropdownMenuItem(
+                      value: entry.key,
+                      child: Text(
+                        entry.value?.name.isNotEmpty == true
+                            ? '${entry.value!.rackTitle} · ${entry.key}'
+                            : entry.value?.rackTitle ?? 'Kệ ${entry.key}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: racks.isEmpty
+                    ? null
+                    : (value) {
+                        if (value == rackCode) return;
+                        setState(() {
+                          _rack = value;
+                          final existing =
+                              current != null && current['rack'] == value
+                              ? current
+                              : null;
+                          _level = existing?['level'] as int? ?? 1;
+                          _bin = existing?['bin'] as int?;
+                        });
+                      },
+              ),
+              if (racks.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Dùng Bố trí kho để đặt kệ trước khi gắn sản phẩm.',
+                  ),
+                ),
+              if (rackSelected) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: c.cardAlt,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: c.divider),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Image.asset(
+                            (racks[rackCode]?.kind ?? _FixtureKind.rack)
+                                .assetPath(occupied: rackItems.isNotEmpty),
+                            width: 66,
+                            height: 34,
+                            fit: BoxFit.contain,
+                            excludeFromSemantics: true,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _bin == null
+                                  ? '$rackTitle · Tầng $_level'
+                                  : '$rackTitle · Tầng $_level · Ô $_bin',
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          for (final tier in levels)
+                            ChoiceChip(
+                              label: Text('Tầng $tier'),
+                              selected: _level == tier,
+                              onSelected: (_) {
+                                if (tier == _level) return;
+                                setState(() {
+                                  _level = tier;
+                                  _bin =
+                                      current?['rack'] == rackCode &&
+                                          current?['level'] == tier
+                                      ? (current?['bin'] as int?)
+                                      : null;
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _bin == null
+                            ? 'Chọn một ô để xem vị trí sẽ lưu'
+                            : destination.isEmpty
+                            ? 'Ô trống'
+                            : destination
+                                  .map((row) => row['productName'])
+                                  .join(', '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: c.textSecondary, fontSize: 13),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (var bin = 1; bin <= binCount; bin++)
+                            _PlacementBin(
+                              bin: bin,
+                              selected: _bin == bin,
+                              current:
+                                  current?['rack'] == rackCode &&
+                                  current?['level'] == _level &&
+                                  current?['bin'] == bin,
+                              items: onLevel
+                                  .where((row) => row['bin'] == bin)
+                                  .toList(),
+                              onTap: () => setState(() => _bin = bin),
+                            ),
+                        ],
+                      ),
+                      TextButton(
+                        onPressed: () =>
+                            setState(() => _showAllSlots = !_showAllSlots),
+                        child: Text(
+                          _showAllSlots
+                              ? 'Thu gọn tầng và ô'
+                              : 'Hiện thêm tầng và ô',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ],
         ),
       ),
@@ -2851,39 +3189,95 @@ class _PositionDialogState extends State<_PositionDialog> {
             backgroundColor: c.primary,
             foregroundColor: Colors.white,
           ),
-          onPressed: () {
-            if (!_form.currentState!.validate()) return;
-            _form.currentState!.save();
-            final choice = widget.choices[_selected];
-            Navigator.pop(context, {
-              'warehouseId': choice['warehouseId'],
-              'productId': choice['productId'],
-              'rack': _rack,
-              'level': _level,
-              'bin': _bin,
-            });
-          },
-          child: const Text('Lưu'),
+          onPressed: selected == null || !rackSelected || _bin == null
+              ? null
+              : () {
+                  final choice = selected;
+                  Navigator.pop(context, {
+                    'warehouseId': choice['warehouseId'],
+                    'productId': choice['productId'],
+                    'rack': _rack,
+                    'level': _level,
+                    'bin': _bin,
+                  });
+                },
+          child: const Text('Lưu vị trí'),
         ),
       ],
     );
   }
+}
 
-  Widget _numberField(
-    String label,
-    int initial,
-    int max,
-    ValueChanged<int> save,
-  ) {
-    return TextFormField(
-      initialValue: '$initial',
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(labelText: label),
-      validator: (value) {
-        final parsed = int.tryParse(value ?? '');
-        return parsed == null || parsed < 1 || parsed > max ? '1-$max' : null;
-      },
-      onSaved: (value) => save(int.parse(value!)),
+class _PlacementBin extends StatelessWidget {
+  const _PlacementBin({
+    required this.bin,
+    required this.selected,
+    required this.current,
+    required this.items,
+    required this.onTap,
+  });
+
+  final int bin;
+  final bool selected;
+  final bool current;
+  final List<Map<String, dynamic>> items;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _appColors(context);
+    final item = items.firstOrNull;
+    return Material(
+      color: selected ? c.primarySubtle : c.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: selected ? c.primary : c.divider),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 74,
+          constraints: const BoxConstraints(minHeight: 83),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Ô $bin',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: selected ? c.primary : c.textPrimary,
+                ),
+              ),
+              if (item == null)
+                Icon(Icons.inbox_outlined, color: c.textMuted, size: 28)
+              else
+                ProductThumbnail(
+                  key: ValueKey((item['productId'], item['imageUrl'])),
+                  imageUrl: item['imageUrl'] as String?,
+                  name: item['productName'] as String?,
+                  size: 32,
+                ),
+              Text(
+                current
+                    ? 'Hiện tại'
+                    : selected
+                    ? 'Đã chọn'
+                    : items.isEmpty
+                    ? 'Trống'
+                    : '${items.length} mặt hàng',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: selected ? c.primary : c.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

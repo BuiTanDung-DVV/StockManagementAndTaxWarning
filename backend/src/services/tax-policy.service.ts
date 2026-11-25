@@ -51,6 +51,11 @@ const DEFAULT_VERIFIED_RULES: Record<string, { name: string; vat: number; pit: n
 
 export class TaxPolicyService {
     async getCurrentPolicy(): Promise<TaxPolicy> {
+        return (await this.getCurrentPolicySelection()).policy;
+    }
+
+    async getCurrentPolicySelection(): Promise<{ policy: TaxPolicy; usedFallback: boolean }> {
+        const fallback = { policy: DEFAULT_VERIFIED_TAX_POLICY_2026, usedFallback: true };
         try {
             const rows = await AppDataSource.query(
                 `SELECT config_key, config_value
@@ -63,19 +68,22 @@ export class TaxPolicyService {
             const missing = requiredPolicyKeys.filter(key => !values.get(key));
             if (missing.length > 0) {
                 console.warn(`[TaxPolicyService] Thiếu cấu hình thuế trong DB: ${missing.join(', ')}. Áp dụng chính sách chuẩn 2026 đã xác minh.`);
-                return DEFAULT_VERIFIED_TAX_POLICY_2026;
+                return fallback;
             }
 
             const fiscalYear = positiveNumber(values.get('TAX_FISCAL_YEAR'), 'TAX_FISCAL_YEAR');
             if (!Number.isInteger(fiscalYear)) {
-                return DEFAULT_VERIFIED_TAX_POLICY_2026;
+                return fallback;
             }
             const effectiveFrom = String(values.get('TAX_EFFECTIVE_FROM'));
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom)) {
-                return DEFAULT_VERIFIED_TAX_POLICY_2026;
+            const effectiveDate = new Date(effectiveFrom);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom)
+                || Number.isNaN(effectiveDate.getTime())
+                || effectiveDate.toISOString().slice(0, 10) !== effectiveFrom) {
+                return fallback;
             }
 
-            return {
+            const policy = {
                 fiscalYear,
                 effectiveFrom,
                 taxExemptionThreshold: positiveNumber(
@@ -93,9 +101,10 @@ export class TaxPolicyService {
                 sourceCode: String(values.get('TAX_POLICY_SOURCE_CODE')),
                 sourceUrl: String(values.get('TAX_POLICY_SOURCE_URL')),
             };
+            return { policy, usedFallback: false };
         } catch (e) {
             console.warn('[TaxPolicyService] Lỗi truy vấn chính sách thuế, chuyển sang cấu hình chuẩn 2026:', e);
-            return DEFAULT_VERIFIED_TAX_POLICY_2026;
+            return fallback;
         }
     }
 

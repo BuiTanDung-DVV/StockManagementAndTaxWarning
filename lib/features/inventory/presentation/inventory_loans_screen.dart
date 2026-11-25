@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_page_header.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/offline/offline_store.dart';
+import '../../../core/utils/warehouse_display_name.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../settings/providers/shop_provider.dart';
 
@@ -29,7 +31,8 @@ final _loansProvider = FutureProvider.autoDispose.family<List<_Row>, int>((
 });
 
 class InventoryLoansScreen extends ConsumerStatefulWidget {
-  const InventoryLoansScreen({super.key});
+  const InventoryLoansScreen({super.key, this.partner});
+  final String? partner;
 
   @override
   ConsumerState<InventoryLoansScreen> createState() =>
@@ -38,6 +41,51 @@ class InventoryLoansScreen extends ConsumerStatefulWidget {
 
 class _InventoryLoansScreenState extends ConsumerState<InventoryLoansScreen> {
   bool _busy = false;
+  bool? _borrowFilter;
+  late final _search = TextEditingController(text: widget.partner);
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  String _stage(_Row loan) {
+    if (loan['canceledAt'] != null) return 'Đã hủy';
+    final shipments = List<_Row>.from(loan['shipments'] as List);
+    if (shipments.isEmpty) return 'Chờ xuất hàng';
+    final open = shipments.where(
+      (s) => s['receivedQuantity'] < s['shippedQuantity'],
+    );
+    if (open.any((s) => s['direction'] == 'RETURN')) return 'Đang hoàn hàng';
+    if (open.isNotEmpty) {
+      return open.any((s) => s['receivedQuantity'] > 0)
+          ? 'Đã nhận một phần'
+          : 'Đang giao';
+    }
+    return loan['outstandingQuantity'] > 0
+        ? _remainingToShip(loan, shipments) > 0
+              ? 'Đã nhận một phần · chờ xuất tiếp'
+              : 'Đã nhận · chờ hoàn'
+        : 'Đã hoàn tất';
+  }
+
+  int _remainingToShip(_Row loan, List<_Row> shipments) {
+    if (shipments.any((s) => s['direction'] == 'RETURN')) return 0;
+    final sent = shipments
+        .where((s) => s['direction'] == 'LOAN')
+        .fold<int>(0, (total, s) => total + (s['shippedQuantity'] as int));
+    return (loan['requestedQuantity'] as int) - sent;
+  }
+
+  bool _matches(_Row loan) {
+    final text =
+        "${loan['id']} ${loan['partnerName']} ${loan['productName']} ${_stage(loan)}"
+            .toLowerCase();
+    return (_borrowFilter == null || _borrowFilter == loan['borrowing']) &&
+        text.contains(_search.text.trim().toLowerCase());
+  }
+
   final _operations = <String, String>{};
 
   Future<void> _change(
@@ -49,6 +97,8 @@ class _InventoryLoansScreenState extends ConsumerState<InventoryLoansScreen> {
     bool warehouse = false,
     bool product = false,
     bool lending = false,
+    int? fixedWarehouseId,
+    int? fixedLenderProductId,
   }) async {
     if (_busy) return;
     final api = ref.read(apiClientProvider);
@@ -82,12 +132,22 @@ class _InventoryLoansScreenState extends ConsumerState<InventoryLoansScreen> {
         final warehouses = List<_Row>.from(
           await get('/inventory/warehouses') as List,
         );
+        final names = {
+          for (final row in warehouses)
+            row['id'] as int: warehouseDisplayName(row['name']),
+        };
         fields.add((
           key: 'warehouseId',
           label: create ? 'Kho nhận' : 'Kho xuất',
           options: [
-            for (final row in warehouses)
-              (id: row['id'] as int, label: row['name'] as String),
+            for (final entry in names.entries)
+              (
+                id: entry.key,
+                label:
+                    names.values.where((name) => name == entry.value).length > 1
+                    ? '${entry.value} (#${entry.key})'
+                    : entry.value,
+              ),
           ],
         ));
       }
@@ -124,6 +184,10 @@ class _InventoryLoansScreenState extends ConsumerState<InventoryLoansScreen> {
             _LoanActionDialog(title: title, fields: fields, max: max),
       );
       if (payload == null || !current()) return;
+      if (fixedWarehouseId != null) payload['warehouseId'] = fixedWarehouseId;
+      if (fixedLenderProductId != null) {
+        payload['lenderProductId'] = fixedLenderProductId;
+      }
       final key =
           '$shop/$path/${payload.entries.map((e) => '${e.key}=${e.value}').join('&')}';
       if (!create) {
@@ -152,7 +216,10 @@ class _InventoryLoansScreenState extends ConsumerState<InventoryLoansScreen> {
     final shop = ref.watch(shopProvider);
     final id = shop.currentShopId;
     return Scaffold(
-      appBar: AppBar(title: const Text('Phiếu mượn hàng')),
+      appBar: AppBar(
+        leading: const AppPageBackLeading(),
+        title: const Text('Phiếu mượn hàng'),
+      ),
       body: id == null || id < 1
           ? const Center(child: Text('Chọn một cửa hàng để xem phiếu.'))
           : ref
@@ -168,7 +235,7 @@ class _InventoryLoansScreenState extends ConsumerState<InventoryLoansScreen> {
                   ),
                   data: (loans) => SingleChildScrollView(
                     child: AppResponsiveContent(
-                      maxWidth: 1000,
+                      maxWidth: 1280,
                       verticalPadding: 20,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -192,6 +259,66 @@ class _InventoryLoansScreenState extends ConsumerState<InventoryLoansScreen> {
                                 label: const Text('Yêu cầu mượn'),
                               ),
                             ),
+                          if (loans.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    TextField(
+                                      controller: _search,
+                                      onChanged: (_) => setState(() {}),
+                                      decoration: InputDecoration(
+                                        prefixIcon: const Icon(Icons.search),
+                                        hintText:
+                                            'Tìm mã phiếu, mặt hàng, đối tác hoặc trạng thái',
+                                        suffixIcon: _search.text.isEmpty
+                                            ? null
+                                            : IconButton(
+                                                tooltip: 'Xóa tìm kiếm',
+                                                icon: const Icon(Icons.clear),
+                                                onPressed: () =>
+                                                    setState(_search.clear),
+                                              ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      children: [
+                                        for (final choice in <bool?>[
+                                          null,
+                                          true,
+                                          false,
+                                        ])
+                                          ChoiceChip(
+                                            selected: _borrowFilter == choice,
+                                            label: Text(
+                                              "${choice == null
+                                                  ? 'Tất cả'
+                                                  : choice
+                                                  ? 'Đi mượn'
+                                                  : 'Cho mượn'} (${loans.where((row) => choice == null || row['borrowing'] == choice).length})",
+                                            ),
+                                            onSelected: (_) => setState(
+                                              () => _borrowFilter = choice,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (!loans.any(_matches))
+                              const Padding(
+                                padding: EdgeInsets.all(20),
+                                child: Text('Không tìm thấy phiếu phù hợp.'),
+                              ),
+                          ],
                           if (loans.isEmpty)
                             Card(
                               child: Padding(
@@ -225,7 +352,7 @@ class _InventoryLoansScreenState extends ConsumerState<InventoryLoansScreen> {
                                 ),
                               ),
                             ),
-                          for (final loan in loans)
+                          for (final loan in loans.where(_matches))
                             _loanCard(
                               id,
                               loan,
@@ -241,6 +368,12 @@ class _InventoryLoansScreenState extends ConsumerState<InventoryLoansScreen> {
 
   Widget _loanCard(int shop, _Row loan, bool editable) {
     final shipments = List<_Row>.from(loan['shipments'] as List);
+    final remainingToShip = _remainingToShip(loan, shipments);
+    final outbound = shipments
+        .where((s) => s['direction'] == 'LOAN')
+        .firstOrNull;
+    final sourceWarehouseId = outbound?['sourceWarehouseId'] as int?;
+    final lenderProductId = loan['lenderProductId'] as int?;
     final borrowing = loan['borrowing'] == true;
     final outstanding = loan['outstandingQuantity'] as int;
     final inTransitReturns = shipments
@@ -257,28 +390,45 @@ class _InventoryLoansScreenState extends ConsumerState<InventoryLoansScreen> {
     final canAct = editable && !_busy && loan['canceledAt'] == null;
     return Card(
       child: ExpansionTile(
+        key: PageStorageKey('loan-$shop-${loan['id']}'),
+        leading: CircleAvatar(
+          child: Icon(borrowing ? Icons.south_west : Icons.north_east),
+        ),
         title: Text('#${loan['id']} · ${loan['productName']}'),
         subtitle: Text(
           '${borrowing ? 'Mượn từ' : 'Cho mượn'} ${loan['partnerName']} · '
-          'Còn phải hoàn $outstanding ${loan['unit']}',
+          '${_stage(loan)}'
+          "${outstanding > 0 ? ' · ${borrowing ? 'Phải hoàn' : 'Chờ nhận lại'} $outstanding ${loan['unit']}' : ''}",
         ),
         children: [
           ListTile(
             title: Text('Yêu cầu ${loan['requestedQuantity']} ${loan['unit']}'),
           ),
           for (final s in shipments) _shipment(shop, borrowing, s, canAct),
-          if (canAct && !borrowing && shipments.isEmpty)
+          if (canAct &&
+              !borrowing &&
+              remainingToShip > 0 &&
+              (outbound == null ||
+                  (sourceWarehouseId != null && lenderProductId != null)))
             TextButton(
               onPressed: () => _change(
                 shop,
                 shipmentPath,
-                'Xác nhận xuất mượn',
-                loan['requestedQuantity'] as int,
-                warehouse: true,
-                product: true,
+                outbound == null
+                    ? 'Xác nhận xuất mượn'
+                    : 'Xuất tiếp từ kho ban đầu',
+                remainingToShip,
+                warehouse: outbound == null,
+                product: outbound == null,
                 lending: true,
+                fixedWarehouseId: sourceWarehouseId,
+                fixedLenderProductId: lenderProductId,
               ),
-              child: const Text('Xuất hàng cho mượn'),
+              child: Text(
+                outbound == null
+                    ? 'Xuất hàng cho mượn'
+                    : 'Xuất tiếp hàng cho mượn',
+              ),
             ),
           if (canAct && borrowing && returnable > 0)
             TextButton(
@@ -352,26 +502,38 @@ class _LoanActionDialogState extends State<_LoanActionDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               for (final field in widget.fields)
-                DropdownButtonFormField<int>(
-                  isExpanded: true,
-                  decoration: InputDecoration(labelText: field.label),
-                  items: [
-                    for (final item in field.options)
-                      DropdownMenuItem(
-                        value: item.id,
-                        child: Text(
-                          item.label,
-                          overflow: TextOverflow.ellipsis,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: DropdownButtonFormField<int>(
+                    initialValue: field.options.length == 1
+                        ? field.options.single.id
+                        : null,
+                    onSaved: (value) => _values[field.key] = value,
+                    isExpanded: true,
+                    decoration: InputDecoration(labelText: field.label),
+                    items: [
+                      for (final item in field.options)
+                        DropdownMenuItem(
+                          value: item.id,
+                          child: Text(
+                            item.label,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                  ],
-                  validator: (value) => value == null
-                      ? 'Chọn ${field.label.toLowerCase()}'
-                      : null,
-                  onChanged: (value) => _values[field.key] = value,
+                    ],
+                    validator: (value) => value == null
+                        ? 'Chọn ${field.label.toLowerCase()}'
+                        : null,
+                    onChanged: (value) => _values[field.key] = value,
+                  ),
                 ),
               TextFormField(
-                decoration: const InputDecoration(labelText: 'Số lượng'),
+                decoration: InputDecoration(
+                  labelText: 'Số lượng',
+                  helperText: widget.max == 2147483647
+                      ? null
+                      : 'Có thể xác nhận từ 1 đến ${widget.max}',
+                ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   final quantity = int.tryParse(value?.trim() ?? '');

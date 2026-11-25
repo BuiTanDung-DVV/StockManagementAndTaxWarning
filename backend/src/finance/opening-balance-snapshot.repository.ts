@@ -1,3 +1,4 @@
+import { COGSService } from '../services/cogs.service';
 import { createHash } from 'crypto';
 import type { DataSource, EntityManager } from 'typeorm';
 import { vietnamDateKey } from './finance-period.utils';
@@ -148,6 +149,21 @@ export async function readOpeningBalanceSnapshot(manager: EntityManager, input: 
         const locations: Row[] = await manager.query(`SELECT product_id,warehouse_id,SUM(quantity)::int AS quantity
             FROM inventory_stocks WHERE shop_id=$1 AND product_id=ANY($2::int[]) GROUP BY product_id,warehouse_id ORDER BY product_id,warehouse_id`, [input.shopId, stockKeys.map(s => s.id)]);
         versions.push(masters, movements, lots, locations);
+        const costing = new COGSService();
+        const method = await costing.getCostingMethod(input.shopId, manager);
+        const averages = method === 'AVG'
+            ? await manager.query(`
+                SELECT p.id, COALESCE(SUM(l.remaining_qty),0)::int AS quantity,
+                    COALESCE(p.average_inventory_value, SUM(l.remaining_qty::numeric*l.cost_price), 0)::text AS value
+                FROM products p LEFT JOIN inventory_lots l ON l.product_id=p.id AND l.shop_id=p.shop_id AND l.remaining_qty>0
+                WHERE p.shop_id=$1 AND p.id=ANY($2::int[])
+                GROUP BY p.id,p.average_inventory_value
+            `, [input.shopId, stockKeys.map(s => s.id)])
+            : [];
+        const averageBalances = new Map<number, { quantity: number; value: string }>(
+            averages.map((row: Row) => [row.id, { quantity: row.quantity, value: row.value }]),
+        );
+        versions.push(averages);
         for (const s of stockKeys) {
             const master = masters.find(m => m.product_id === s.id && m.warehouse_id === s.warehouse)!;
             const movement = movements.find(m => m.product_id === s.id && m.warehouse_id === s.warehouse);
@@ -167,7 +183,7 @@ export async function readOpeningBalanceSnapshot(manager: EntityManager, input: 
                 return Number(l.remaining_qty) > 0 && before && warehouse === s.warehouse;
             });
             rows.push({ key: s.key, kind: 'STOCK', quantity: master.current_quantity - Number(movement?.net_after ?? 0),
-                currentQuantity: master.current_quantity, lots: eligible.map(l => ({ id: l.id, remainingQty: Number(l.remaining_qty), costPrice: String(l.cost_price) })) });
+                currentQuantity: master.current_quantity, averageBalance: averageBalances.get(s.id!), lots: eligible.map(l => ({ id: l.id, remainingQty: Number(l.remaining_qty), costPrice: String(l.cost_price) })) });
             labels[s.key] = `${master.name} · ${master.warehouse_name} · ${master.unit}`;
         }
     }

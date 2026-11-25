@@ -1,3 +1,4 @@
+import { lockShopMutation } from '../utils/shop-mutation-lock';
 import { AppDataSource } from '../config/db.config';
 import { config } from '../config/env.config';
 import { normalizeInvoiceScanQuery } from '../finance/invoice-scan-query.utils';
@@ -59,7 +60,7 @@ export class SystemService {
         const allowedFields: (keyof ShopProfile)[] = [
             'shopName', 'phone', 'address', 'taxCode', 'email', 'website',
             'ownerName', 'ownerIdentityNumber', 'businessLicenseNumber',
-            'receiptFooter', 'costingMethod', 'businessSector',
+            'receiptFooter', 'businessSector',
             'applyVatReduction', 'customVatRate', 'customPitRate',
             'bankId', 'bankAccount', 'bankName', 'accountHolder',
         ];
@@ -93,7 +94,24 @@ export class SystemService {
             profile.bankId = bank.id;
             profile.bankName = bank.name;
         }
-        return this.profileRepo.save(profile);
+        return AppDataSource.transaction(async manager => {
+            await lockShopMutation(manager, shopId);
+            const profiles = manager.getRepository(ShopProfile);
+            const current = await profiles.findOneByOrFail({ id: profile.id });
+            if (dto.costingMethod !== undefined && !['AVG', 'FIFO'].includes(dto.costingMethod)) {
+                throw new Error('Validation: Phương pháp tính giá vốn không hợp lệ');
+            }
+            profile.costingMethod = dto.costingMethod ?? current.costingMethod;
+            if (current.costingMethod !== profile.costingMethod) {
+                await manager.query(`
+                    UPDATE products p SET average_inventory_value=NULL, cost_price=COALESCE((
+                        SELECT ROUND(SUM(l.remaining_qty::numeric * l.cost_price) / NULLIF(SUM(l.remaining_qty),0), 2)
+                        FROM inventory_lots l WHERE l.product_id=p.id AND l.shop_id=p.shop_id AND l.remaining_qty>0
+                    ), p.cost_price) WHERE p.shop_id=$1
+                `, [shopId]);
+            }
+            return profiles.save(profile);
+        });
     }
 
     async uploadReceiptLogo(shopId: number, request: ProductImageUploadRequest, bytes: Buffer) {

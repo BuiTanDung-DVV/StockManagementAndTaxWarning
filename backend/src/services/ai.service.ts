@@ -14,6 +14,16 @@ import { legalGroundingService } from './legal-grounding.service';
 import { withAiDeadline } from '../ai/ai-deadline.utils';
 import { readCurrentDebtSummary } from '../finance/current-debt-summary.repository';
 
+export interface AiDataAccess {
+  inventory: boolean;
+  inventoryValue: boolean;
+  sales: boolean;
+  receivables: boolean;
+  payables: boolean;
+  tax: boolean;
+  knowledge: boolean;
+}
+
 export interface ChatMessage {
   role: 'user' | 'model' | 'assistant';
   content: string;
@@ -48,7 +58,7 @@ export class AiService {
   /**
    * Tổng hợp dữ liệu thực tế từ cơ sở dữ liệu của cửa hàng (Store Snapshot)
    */
-  private async getStoreContext(shopId: number): Promise<string> {
+  private async getStoreContext(shopId: number, access: AiDataAccess): Promise<string> {
     let inventoryOverviewText: string = 'Đang cập nhật';
     let outOfStockText: string = 'Không có mặt hàng nào hết sạch tồn kho.';
     let lowStockText: string = 'Không có sản phẩm nào chạm mức tồn kho tối thiểu.';
@@ -60,188 +70,194 @@ export class AiService {
     let supplierDebt: string | null = null;
     let taxText: string | null = null;
 
-    // 1. Tổng quan kho hàng & Mặt hàng
-    try {
-      const invOverview = await AppDataSource.query(`
-        SELECT
-          COUNT(p.id)::int AS total_products,
-          COALESCE(SUM(s.quantity), 0)::numeric AS total_qty,
-          COALESCE(SUM(s.quantity * COALESCE(p.cost_price, 0)), 0)::numeric AS total_inventory_value
-        FROM products p
-        LEFT JOIN inventory_stocks s
-          ON s.product_id = p.id
-          AND s.shop_id = p.shop_id
-        WHERE p.shop_id = $1
-          AND p.is_active = true
-      `, [shopId]);
+    if (access.inventory) {
+      // 1. Tổng quan kho hàng & Mặt hàng
+      try {
+        const invOverview = await AppDataSource.query(`
+          SELECT
+            COUNT(DISTINCT p.id)::int AS total_products,
+            COALESCE(SUM(s.quantity), 0)::numeric AS total_qty${access.inventoryValue ? ', COALESCE(SUM(s.quantity * COALESCE(p.cost_price, 0)), 0)::numeric AS total_inventory_value' : ''}
+          FROM products p
+          LEFT JOIN inventory_stocks s
+            ON s.product_id = p.id
+            AND s.shop_id = p.shop_id
+          WHERE p.shop_id = $1
+            AND p.is_active = true
+        `, [shopId]);
 
-      if (invOverview && invOverview.length > 0) {
-        const row = invOverview[0];
-        const totalProducts = Number(row.total_products || 0);
-        const totalQty = Number(row.total_qty || 0);
-        const totalVal = Number(row.total_inventory_value || 0);
-        inventoryOverviewText = `Đang quản lý ${totalProducts.toLocaleString('vi-VN')} mặt hàng, tổng tồn kho ${totalQty.toLocaleString('vi-VN')} đơn vị, ước tính tổng giá trị vốn tồn kho là ${totalVal.toLocaleString('vi-VN')} VNĐ.`;
+        if (invOverview && invOverview.length > 0) {
+          const row = invOverview[0];
+          const totalProducts = Number(row.total_products || 0);
+          const totalQty = Number(row.total_qty || 0);
+          const totalVal = Number(row.total_inventory_value || 0);
+          inventoryOverviewText = `Đang quản lý ${totalProducts.toLocaleString('vi-VN')} mặt hàng, tổng tồn kho ${totalQty.toLocaleString('vi-VN')} đơn vị.${access.inventoryValue ? ` Giá trị vốn tồn kho ước tính: ${totalVal.toLocaleString('vi-VN')} VNĐ.` : ''}`;
+        }
+      } catch (e) {
+        console.warn('AI StoreContext - Lỗi truy vấn tổng quan kho:', e);
       }
-    } catch (e) {
-      console.warn('AI StoreContext - Lỗi truy vấn tổng quan kho:', e);
+
+      // 1.1 Danh mục ngành hàng đang kinh doanh
+      try {
+        const catRows = await AppDataSource.query(`
+          SELECT DISTINCT c.name AS category
+          FROM products p
+          JOIN categories c ON c.id = p.category_id AND c.shop_id = p.shop_id
+          WHERE p.shop_id = $1 AND p.is_active = true AND TRIM(c.name) != ''
+          LIMIT 10
+        `, [shopId]);
+        if (catRows && catRows.length > 0) {
+          categoriesText = catRows.map((r: any) => r.category).join(', ');
+        }
+      } catch (e) {
+        console.warn('AI StoreContext - Lỗi truy vấn danh mục ngành hàng:', e);
+      }
+
+      // 1.2 Mặt hàng đã hết sạch tồn kho (tồn = 0)
+      try {
+        const outOfStockRows = await AppDataSource.query(`
+          SELECT
+            p.name,
+            p.sku,
+            p.unit,
+            p.min_stock
+          FROM products p
+          LEFT JOIN inventory_stocks s
+            ON s.product_id = p.id
+            AND s.shop_id = p.shop_id
+          WHERE p.shop_id = $1
+            AND p.is_active = true
+          GROUP BY p.id, p.name, p.sku, p.unit, p.min_stock
+          HAVING COALESCE(SUM(s.quantity), 0) <= 0
+          ORDER BY p.name ASC
+          LIMIT 6
+        `, [shopId]);
+
+        if (outOfStockRows && outOfStockRows.length > 0) {
+          outOfStockText = outOfStockRows.map((p: any) =>
+            `- ${p.name} (SKU: ${p.sku || 'N/A'}): Tồn kho = 0 ${p.unit || 'sản phẩm'} (Định mức tối thiểu: ${Number(p.min_stock || 0).toLocaleString('vi-VN')})`,
+          ).join('\n');
+        }
+      } catch (e) {
+        console.warn('AI StoreContext - Lỗi truy vấn hàng hết tồn:', e);
+      }
+
+      // 1.3 Mặt hàng chạm ngưỡng tồn kho tối thiểu (còn hàng nhưng <= min_stock)
+      try {
+        const lowStockResult = await AppDataSource.query(`
+          SELECT
+            p.name,
+            p.sku,
+            p.unit,
+            p.min_stock,
+            COALESCE(SUM(s.quantity), 0) AS current_stock
+          FROM products p
+          LEFT JOIN inventory_stocks s
+            ON s.product_id = p.id
+            AND s.shop_id = p.shop_id
+          WHERE p.shop_id = $1
+            AND p.is_active = true
+            AND p.min_stock > 0
+          GROUP BY p.id, p.name, p.sku, p.unit, p.min_stock
+          HAVING COALESCE(SUM(s.quantity), 0) > 0 AND COALESCE(SUM(s.quantity), 0) <= p.min_stock
+          ORDER BY (p.min_stock - COALESCE(SUM(s.quantity), 0)) DESC, p.name ASC
+          LIMIT 6
+        `, [shopId]);
+
+        if (lowStockResult && lowStockResult.length > 0) {
+          lowStockText = lowStockResult.map((p: any) =>
+            `- ${p.name} (SKU: ${p.sku || 'N/A'}): còn ${Number(p.current_stock || 0).toLocaleString('vi-VN')} ${p.unit || 'sản phẩm'} (Định mức: ${Number(p.min_stock || 0).toLocaleString('vi-VN')})`,
+          ).join('\n');
+        }
+      } catch (e) {
+        console.warn('AI StoreContext - Lỗi truy vấn sản phẩm chạm định mức:', e);
+      }
     }
 
-    // 1.1 Danh mục ngành hàng đang kinh doanh
-    try {
-      const catRows = await AppDataSource.query(`
-        SELECT DISTINCT c.name AS category
-        FROM products p
-        JOIN categories c ON c.id = p.category_id AND c.shop_id = p.shop_id
-        WHERE p.shop_id = $1 AND p.is_active = true AND TRIM(c.name) != ''
-        LIMIT 10
-      `, [shopId]);
-      if (catRows && catRows.length > 0) {
-        categoriesText = catRows.map((r: any) => r.category).join(', ');
+    if (access.sales) {
+      // 2. Doanh thu & Top bán chạy 30 ngày qua
+      try {
+        const toDate = new Date();
+        const fromDate = new Date(toDate.getTime() - 29 * 24 * 60 * 60 * 1000);
+        const sales = await this.salesService.summary(
+          shopId,
+          vietnamDateKey(fromDate),
+          vietnamDateKey(toDate),
+        );
+        revenue = Number(sales.netSalesRevenue).toLocaleString('vi-VN');
+        orders = Number(sales.orderCount);
+
+        // Top 5 sản phẩm bán chạy
+        const topSellingRows = (await this.salesService.getTopProducts(
+          shopId,
+          vietnamDateKey(fromDate),
+          vietnamDateKey(toDate),
+        )).slice(0, 5);
+
+        if (topSellingRows && topSellingRows.length > 0) {
+          topSellingText = topSellingRows.map((p: any, idx: number) =>
+            `${idx + 1}. ${p.name}: Đã bán ${Number(p.quantity).toLocaleString('vi-VN')} sản phẩm, doanh thu thuần ${Number(p.value).toLocaleString('vi-VN')} VNĐ`,
+          ).join('\n');
+        }
+      } catch (e) {
+        console.warn('AI StoreContext - Lỗi truy vấn doanh thu và top bán chạy:', e);
       }
-    } catch (e) {
-      console.warn('AI StoreContext - Lỗi truy vấn danh mục ngành hàng:', e);
     }
 
-    // 1.2 Mặt hàng đã hết sạch tồn kho (tồn = 0)
-    try {
-      const outOfStockRows = await AppDataSource.query(`
-        SELECT
-          p.name,
-          p.sku,
-          p.unit,
-          p.min_stock
-        FROM products p
-        LEFT JOIN inventory_stocks s
-          ON s.product_id = p.id
-          AND s.shop_id = p.shop_id
-        WHERE p.shop_id = $1
-          AND p.is_active = true
-        GROUP BY p.id, p.name, p.sku, p.unit, p.min_stock
-        HAVING COALESCE(SUM(s.quantity), 0) <= 0
-        ORDER BY p.name ASC
-        LIMIT 6
-      `, [shopId]);
-
-      if (outOfStockRows && outOfStockRows.length > 0) {
-        outOfStockText = outOfStockRows.map((p: any) =>
-          `- ${p.name} (SKU: ${p.sku || 'N/A'}): Tồn kho = 0 ${p.unit || 'sản phẩm'} (Định mức tối thiểu: ${Number(p.min_stock || 0).toLocaleString('vi-VN')})`,
-        ).join('\n');
+    if (access.receivables || access.payables) {
+      // 3. Current effective debt, including opening dates and reductions.
+      try {
+        const asOf = vietnamDateKey(new Date());
+        const debt = await AppDataSource.transaction('REPEATABLE READ', async manager => ({
+          receivable: access.receivables
+            ? await readCurrentDebtSummary(manager, 'RECEIVABLE', [shopId], asOf) : null,
+          payable: access.payables
+            ? await readCurrentDebtSummary(manager, 'PAYABLE', [shopId], asOf) : null,
+        }));
+        if (debt.receivable) customerDebt = Number(debt.receivable.total_amount).toLocaleString('vi-VN');
+        if (debt.payable) supplierDebt = Number(debt.payable.total_amount).toLocaleString('vi-VN');
+      } catch (e) {
+        console.warn('AI StoreContext - Chưa đối chiếu được công nợ:', e);
       }
-    } catch (e) {
-      console.warn('AI StoreContext - Lỗi truy vấn hàng hết tồn:', e);
     }
 
-    // 1.3 Mặt hàng chạm ngưỡng tồn kho tối thiểu (còn hàng nhưng <= min_stock)
-    try {
-      const lowStockResult = await AppDataSource.query(`
-        SELECT
-          p.name,
-          p.sku,
-          p.unit,
-          p.min_stock,
-          COALESCE(SUM(s.quantity), 0) AS current_stock
-        FROM products p
-        LEFT JOIN inventory_stocks s
-          ON s.product_id = p.id
-          AND s.shop_id = p.shop_id
-        WHERE p.shop_id = $1
-          AND p.is_active = true
-          AND p.min_stock > 0
-        GROUP BY p.id, p.name, p.sku, p.unit, p.min_stock
-        HAVING COALESCE(SUM(s.quantity), 0) > 0 AND COALESCE(SUM(s.quantity), 0) <= p.min_stock
-        ORDER BY (p.min_stock - COALESCE(SUM(s.quantity), 0)) DESC, p.name ASC
-        LIMIT 6
-      `, [shopId]);
+    if (access.tax) {
+      // 4. Nghĩa vụ thuế / Cảnh báo thuế
+      try {
+        const taxObligations = await AppDataSource.query(`
+          SELECT period, due_date, status, COALESCE(vat_declared + pit_declared - vat_paid - pit_paid, 0) AS amount
+          FROM tax_obligations
+          WHERE shop_id = $1 AND status IN ('PENDING', 'OVERDUE')
+          ORDER BY due_date ASC LIMIT 5
+        `, [shopId]);
 
-      if (lowStockResult && lowStockResult.length > 0) {
-        lowStockText = lowStockResult.map((p: any) =>
-          `- ${p.name} (SKU: ${p.sku || 'N/A'}): còn ${Number(p.current_stock || 0).toLocaleString('vi-VN')} ${p.unit || 'sản phẩm'} (Định mức: ${Number(p.min_stock || 0).toLocaleString('vi-VN')})`,
-        ).join('\n');
+        if (taxObligations && taxObligations.length > 0) {
+          taxText = taxObligations.map((t: any) => `- Kỳ thuế: ${t.period}, Số tiền còn lại: ${Number(t.amount).toLocaleString('vi-VN')} VNĐ, Trạng thái: ${t.status}, Hạn nộp: ${t.due_date ? new Date(t.due_date).toLocaleDateString('vi-VN') : 'N/A'}`).join('\n');
+        } else {
+          taxText = 'Không có nghĩa vụ thuế đọng hoặc quá hạn.';
+        }
+      } catch (e) {
+        console.warn('AI StoreContext - Lỗi truy vấn nghĩa vụ thuế:', e);
       }
-    } catch (e) {
-      console.warn('AI StoreContext - Lỗi truy vấn sản phẩm chạm định mức:', e);
-    }
-
-    // 2. Doanh thu & Top bán chạy 30 ngày qua
-    try {
-      const toDate = new Date();
-      const fromDate = new Date(toDate.getTime() - 29 * 24 * 60 * 60 * 1000);
-      const sales = await this.salesService.summary(
-        shopId,
-        vietnamDateKey(fromDate),
-        vietnamDateKey(toDate),
-      );
-      revenue = Number(sales.netSalesRevenue).toLocaleString('vi-VN');
-      orders = Number(sales.orderCount);
-
-      // Top 5 sản phẩm bán chạy
-      const topSellingRows = (await this.salesService.getTopProducts(
-        shopId,
-        vietnamDateKey(fromDate),
-        vietnamDateKey(toDate),
-      )).slice(0, 5);
-
-      if (topSellingRows && topSellingRows.length > 0) {
-        topSellingText = topSellingRows.map((p: any, idx: number) =>
-          `${idx + 1}. ${p.name}: Đã bán ${Number(p.quantity).toLocaleString('vi-VN')} sản phẩm, doanh thu thuần ${Number(p.value).toLocaleString('vi-VN')} VNĐ`,
-        ).join('\n');
-      }
-    } catch (e) {
-      console.warn('AI StoreContext - Lỗi truy vấn doanh thu và top bán chạy:', e);
-    }
-
-    // 3. Current effective debt, including opening dates and reductions.
-    try {
-      const asOf = vietnamDateKey(new Date());
-      const debt = await AppDataSource.transaction('REPEATABLE READ', async manager => ({
-        receivable: await readCurrentDebtSummary(manager, 'RECEIVABLE', [shopId], asOf),
-        payable: await readCurrentDebtSummary(manager, 'PAYABLE', [shopId], asOf),
-      }));
-      customerDebt = Number(debt.receivable.total_amount).toLocaleString('vi-VN');
-      supplierDebt = Number(debt.payable.total_amount).toLocaleString('vi-VN');
-    } catch (e) {
-      console.warn('AI StoreContext - Chưa đối chiếu được công nợ:', e);
-    }
-
-    // 4. Nghĩa vụ thuế / Cảnh báo thuế
-    try {
-      const taxObligations = await AppDataSource.query(`
-        SELECT period, due_date, status, COALESCE(vat_declared + pit_declared - vat_paid - pit_paid, 0) AS amount
-        FROM tax_obligations
-        WHERE shop_id = $1 AND status IN ('PENDING', 'OVERDUE')
-        ORDER BY due_date ASC LIMIT 5
-      `, [shopId]);
-
-      if (taxObligations && taxObligations.length > 0) {
-        taxText = taxObligations.map((t: any) => `- Kỳ thuế: ${t.period}, Số tiền còn lại: ${Number(t.amount).toLocaleString('vi-VN')} VNĐ, Trạng thái: ${t.status}, Hạn nộp: ${t.due_date ? new Date(t.due_date).toLocaleDateString('vi-VN') : 'N/A'}`).join('\n');
-      } else {
-        taxText = 'Không có nghĩa vụ thuế đọng hoặc quá hạn.';
-      }
-    } catch (e) {
-      console.warn('AI StoreContext - Lỗi truy vấn nghĩa vụ thuế:', e);
     }
 
     return `
 === BẢN TỔNG HỢP DỮ LIỆU THỰC TẾ CỬA HÀNG (CẬP NHẬT TỰ ĐỘNG) ===
-1. Tổng quan Kho hàng:
+${access.inventory ? `Tổng quan Kho hàng:
 - Tình trạng: ${inventoryOverviewText}
 - Các ngành hàng kinh doanh chính: ${categoriesText}
 - Mặt hàng đã HẾT HÀNG (cần nhập khẩn cấp):
 ${outOfStockText}
 - Mặt hàng chạm định mức tồn kho tối thiểu:
-${lowStockText ?? 'CHƯA THỂ TRUY VẤN DB'}
+${lowStockText}` : ''}
 
-2. Hiệu quả Bán hàng (30 ngày gần nhất):
+${access.sales ? `Hiệu quả Bán hàng (30 ngày gần nhất):
 - Tổng doanh thu bán hàng: ${revenue === null ? 'CHƯA THỂ TRUY VẤN DB' : `${revenue} VNĐ (${orders} đơn hàng thành công)`}
 - Top 5 sản phẩm bán chạy nhất:
-${topSellingText}
-
-3. Quản lý Tài chính & Công nợ:
-- Tổng nợ khách hàng cần thu: ${customerDebt === null ? 'CHƯA THỂ TRUY VẤN DB' : `${customerDebt} VNĐ`}
-- Tổng nợ phải trả cho nhà cung cấp: ${supplierDebt === null ? 'CHƯA THỂ TRUY VẤN DB' : `${supplierDebt} VNĐ`}
-
-4. Nghĩa vụ Thuế hộ kinh doanh:
-${taxText ?? 'CHƯA THỂ TRUY VẤN DB'}
+${topSellingText}` : ''}
+${access.receivables ? `Tổng nợ khách hàng cần thu: ${customerDebt === null ? 'CHƯA THỂ TRUY VẤN DB' : `${customerDebt} VNĐ`}` : ''}
+${access.payables ? `Tổng nợ phải trả cho nhà cung cấp: ${supplierDebt === null ? 'CHƯA THỂ TRUY VẤN DB' : `${supplierDebt} VNĐ`}` : ''}
+${access.tax ? `Nghĩa vụ thuế hộ kinh doanh:
+${taxText ?? 'CHƯA THỂ TRUY VẤN DB'}` : ''}
 - Mọi mục ghi CHƯA THỂ TRUY VẤN DB là dữ liệu không khả dụng, không được suy diễn thành 0 hoặc trạng thái an toàn.
 =============================================================
 `;
@@ -250,13 +266,28 @@ ${taxText ?? 'CHƯA THỂ TRUY VẤN DB'}
   /**
    * Lấy các tài liệu tri thức / quy định thuế đã cấu hình của cửa hàng
    */
-  private async getKnowledgeContext(shopId: number): Promise<string> {
+  private async getKnowledgeContext(shopId: number, question: string): Promise<string> {
     try {
-      const docs = await this.knowledgeRepo.find({
-        where: { shopId, isActive: true },
-        order: { createdAt: 'DESC' },
-        take: 10,
-      });
+      const tokens = question.normalize('NFC').toLowerCase().match(/[\p{L}\p{M}\p{N}]{3,}/gu) ?? [];
+      const terms = [...new Set(tokens.map(token => token.slice(0, 48)))].slice(0, 16);
+      const query = this.knowledgeRepo.createQueryBuilder('doc')
+        .where('doc.shopId = :shopId AND doc.isActive = true', { shopId })
+        .orderBy('doc.createdAt', 'DESC')
+        .addOrderBy('doc.id', 'DESC')
+        .take(10);
+      if (terms.length > 0) {
+        query.addSelect(`ts_rank(
+          setweight(to_tsvector('simple', doc.title), 'A') ||
+          setweight(to_tsvector('simple', doc.category), 'B') ||
+          to_tsvector('simple', doc.content),
+          to_tsquery('simple', :terms)
+        )`, 'relevance')
+          .orderBy('relevance', 'DESC')
+          .addOrderBy('doc.createdAt', 'DESC')
+          .addOrderBy('doc.id', 'DESC')
+          .setParameter('terms', terms.join(' | '));
+      }
+      const docs = await query.getMany();
 
       if (!docs || docs.length === 0) {
         return `
@@ -290,22 +321,23 @@ ${docsText}
   /**
    * Đặt câu hỏi và nhận câu trả lời 100% từ Google Gemini API
    */
-  async askAdvisor(shopId: number, dto: ChatRequestDto): Promise<AiAdvisorResult> {
-    return withAiDeadline(remainingMs => this.askAdvisorWithinDeadline(shopId, dto, remainingMs));
+  async askAdvisor(shopId: number, dto: ChatRequestDto, access: AiDataAccess): Promise<AiAdvisorResult> {
+    return withAiDeadline(remainingMs => this.askAdvisorWithinDeadline(shopId, dto, access, remainingMs));
   }
 
   private async askAdvisorWithinDeadline(
     shopId: number,
     dto: ChatRequestDto,
+    access: AiDataAccess,
     remainingMs: () => number,
   ): Promise<AiAdvisorResult> {
     const key = config.geminiApiKey;
     if (!key) {
       throw new Error('Trợ lý AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.');
     }
-    const storeContext = await this.getStoreContext(shopId);
+    const storeContext = await this.getStoreContext(shopId, access);
     remainingMs();
-    const knowledgeContext = await this.getKnowledgeContext(shopId);
+    const knowledgeContext = access.knowledge ? await this.getKnowledgeContext(shopId, dto.question) : '';
     remainingMs();
     const requiresLegalSources = isLegalDocumentQuestion(dto.question);
     const searchedAt = requiresLegalSources ? new Date().toISOString() : undefined;
@@ -313,7 +345,7 @@ ${docsText}
     const systemPrompt = `Bạn là Trợ lý AI thông minh kiêm Cố vấn Quản trị & Tài chính chuyên nghiệp cho Hộ kinh doanh tại Việt Nam.
 
 Hướng dẫn trả lời:
-1. Bạn có bức tranh tổng thể về tình hình kinh doanh, kho hàng và tài chính của cửa hàng qua bản tổng hợp số liệu thực tế bên dưới. Hãy phân tích sắc bén, tự nhiên, đầy đủ và đưa ra các hành động cụ thể cho chủ cửa hàng.
+1. Chỉ sử dụng dữ liệu cửa hàng được cung cấp trong ngữ cảnh. Khi một nhóm số liệu không có trong ngữ cảnh, hãy nói rõ số liệu đó không khả dụng và không suy diễn.
 2. Tuyệt đối KHÔNG đưa ra những câu máy móc kiểu "chưa thể truy vấn trực tiếp từ cơ sở dữ liệu" hay thắc mắc về kỹ thuật. Hãy sử dụng linh hoạt các số liệu tổng quan sẵn có (tổng số mặt hàng, giá trị tồn kho, các mặt hàng hết hàng cần nhập gấp, mặt hàng chạm định mức, top bán chạy, doanh thu, công nợ) để trả lời trọn vẹn và chuyên nghiệp.
 3. Khi tư vấn nhập hàng/tồn kho: Luôn ưu tiên cảnh báo các mặt hàng đã HẾT HÀNG (tồn = 0) và chạm định mức tối thiểu, đồng thời đối chiếu với Top sản phẩm bán chạy để tối ưu hóa dòng vốn lưu động.
 4. Với câu hỏi pháp luật/thuế: Bắt buộc tra cứu web ở thời điểm trả lời và chỉ kết luận từ nguồn được tìm thấy trên các trang chính thống (vbpl.vn, vanban.chinhphu.vn, gdt.gov.vn, thuvienphapluat.vn).
@@ -438,80 +470,86 @@ Người dùng hỏi: ${dto.question}`;
   /**
    * Lấy danh sách gợi ý phân tích nhanh (Quick Insights)
    */
-  async getQuickInsights(shopId: number): Promise<{ title: string; category: 'INVENTORY' | 'TAX' | 'SALES' | 'FINANCE'; description: string; priority: 'HIGH' | 'MEDIUM' | 'INFO' }[]> {
+  async getQuickInsights(shopId: number, access: AiDataAccess): Promise<{ title: string; category: 'INVENTORY' | 'TAX' | 'SALES' | 'FINANCE'; description: string; priority: 'HIGH' | 'MEDIUM' | 'INFO' }[]> {
     const insights: { title: string; category: 'INVENTORY' | 'TAX' | 'SALES' | 'FINANCE'; description: string; priority: 'HIGH' | 'MEDIUM' | 'INFO' }[] = [];
 
-    // 1. Kiểm tra tồn kho
-    try {
-      const lowStock = await AppDataSource.query(`
-        SELECT COUNT(*)::int AS count
-        FROM (
-          SELECT p.id
-          FROM products p
-          LEFT JOIN inventory_stocks s
-            ON s.product_id = p.id
-            AND s.shop_id = p.shop_id
-          WHERE p.shop_id = $1
-            AND p.is_active = true
-            AND p.min_stock > 0
-          GROUP BY p.id, p.min_stock
-          HAVING COALESCE(SUM(s.quantity), 0) <= p.min_stock
-        ) low_stock_products
-      `, [shopId]);
-      if (lowStock && lowStock[0]?.count > 0) {
-        insights.push({
-          title: 'Cảnh báo hàng sắp hết kho',
-          category: 'INVENTORY',
-          description: `Có ${lowStock[0].count} mặt hàng đang chạm hoặc thấp hơn định mức tồn kho tối thiểu. Nên kiểm tra và tạo đơn nhập hàng mới.`,
-          priority: 'HIGH',
-        });
+    if (access.inventory) {
+      // 1. Kiểm tra tồn kho
+      try {
+        const lowStock = await AppDataSource.query(`
+          SELECT COUNT(*)::int AS count
+          FROM (
+            SELECT p.id
+            FROM products p
+            LEFT JOIN inventory_stocks s
+              ON s.product_id = p.id
+              AND s.shop_id = p.shop_id
+            WHERE p.shop_id = $1
+              AND p.is_active = true
+              AND p.min_stock > 0
+            GROUP BY p.id, p.min_stock
+            HAVING COALESCE(SUM(s.quantity), 0) <= p.min_stock
+          ) low_stock_products
+        `, [shopId]);
+        if (lowStock && lowStock[0]?.count > 0) {
+          insights.push({
+            title: 'Cảnh báo hàng sắp hết kho',
+            category: 'INVENTORY',
+            description: `Có ${lowStock[0].count} mặt hàng đang chạm hoặc thấp hơn định mức tồn kho tối thiểu. Nên kiểm tra và tạo đơn nhập hàng mới.`,
+            priority: 'HIGH',
+          });
+        }
+      } catch (e) {
+        console.warn('AI Insights - Lỗi tồn kho:', e);
+        insights.push({ title: 'Chưa kiểm tra được tồn kho', category: 'INVENTORY', description: 'Dữ liệu tồn kho tạm thời không khả dụng. Hãy tải lại trước khi đưa ra quyết định.', priority: 'INFO' });
       }
-    } catch (e) {
-      console.warn('AI Insights - Lỗi tồn kho:', e);
-      insights.push({ title: 'Chưa kiểm tra được tồn kho', category: 'INVENTORY', description: 'Dữ liệu tồn kho tạm thời không khả dụng. Hãy tải lại trước khi đưa ra quyết định.', priority: 'INFO' });
     }
 
-    // 2. Kiểm tra nghĩa vụ thuế
-    try {
-      const pendingTax = await AppDataSource.query(`
-        SELECT COUNT(*)::int AS count, COALESCE(SUM(vat_declared + pit_declared - vat_paid - pit_paid), 0) AS total 
-        FROM tax_obligations WHERE shop_id = $1 AND status IN ('PENDING', 'OVERDUE')
-      `, [shopId]);
-      if (pendingTax && pendingTax[0]?.count > 0) {
-        insights.push({
-          title: 'Nghĩa vụ thuế cần xử lý',
-          category: 'TAX',
-          description: `Bạn có ${pendingTax[0].count} khoản thuế chưa hoàn thành với tổng số tiền ${Number(pendingTax[0].total).toLocaleString('vi-VN')} VNĐ.`,
-          priority: 'MEDIUM',
-        });
+    if (access.tax) {
+      // 2. Kiểm tra nghĩa vụ thuế
+      try {
+        const pendingTax = await AppDataSource.query(`
+          SELECT COUNT(*)::int AS count, COALESCE(SUM(vat_declared + pit_declared - vat_paid - pit_paid), 0) AS total
+          FROM tax_obligations WHERE shop_id = $1 AND status IN ('PENDING', 'OVERDUE')
+        `, [shopId]);
+        if (pendingTax && pendingTax[0]?.count > 0) {
+          insights.push({
+            title: 'Nghĩa vụ thuế cần xử lý',
+            category: 'TAX',
+            description: `Bạn có ${pendingTax[0].count} khoản thuế chưa hoàn thành với tổng số tiền ${Number(pendingTax[0].total).toLocaleString('vi-VN')} VNĐ.`,
+            priority: 'MEDIUM',
+          });
+        }
+      } catch (e) {
+        console.warn('AI Insights - Lỗi thuế:', e);
+        insights.push({ title: 'Chưa kiểm tra được nghĩa vụ thuế', category: 'TAX', description: 'Dữ liệu nghĩa vụ thuế tạm thời không khả dụng. Hãy tải lại để kiểm tra.', priority: 'INFO' });
       }
-    } catch (e) {
-      console.warn('AI Insights - Lỗi thuế:', e);
-      insights.push({ title: 'Chưa kiểm tra được nghĩa vụ thuế', category: 'TAX', description: 'Dữ liệu nghĩa vụ thuế tạm thời không khả dụng. Hãy tải lại để kiểm tra.', priority: 'INFO' });
     }
 
-    // 3. Công nợ khách hàng
-    try {
-      const debt = await AppDataSource.transaction('REPEATABLE READ', manager =>
-        readCurrentDebtSummary(manager, 'RECEIVABLE', [shopId], vietnamDateKey(new Date())));
-      if (Number(debt.total_amount) > 0) {
-        insights.push({
-          title: 'Quản lý thu hồi công nợ',
-          category: 'FINANCE',
-          description: `Tổng công nợ khách hàng cần thu là ${Number(debt.total_amount).toLocaleString('vi-VN')} VNĐ. Hãy kiểm tra lịch sử nợ để đối soát.`,
-          priority: 'MEDIUM',
-        });
+    if (access.receivables) {
+      // 3. Công nợ khách hàng
+      try {
+        const debt = await AppDataSource.transaction('REPEATABLE READ', manager =>
+          readCurrentDebtSummary(manager, 'RECEIVABLE', [shopId], vietnamDateKey(new Date())));
+        if (Number(debt.total_amount) > 0) {
+          insights.push({
+            title: 'Quản lý thu hồi công nợ',
+            category: 'FINANCE',
+            description: `Tổng công nợ khách hàng cần thu là ${Number(debt.total_amount).toLocaleString('vi-VN')} VNĐ. Hãy kiểm tra lịch sử nợ để đối soát.`,
+            priority: 'MEDIUM',
+          });
+        }
+      } catch (e) {
+        console.warn('AI Insights - Lỗi công nợ:', e);
+        insights.push({ title: 'Chưa kiểm tra được công nợ', category: 'FINANCE', description: 'Chưa đối chiếu được số dư công nợ hiện tại. Hãy tải lại, không dùng dữ liệu thiếu để kết luận đã hết nợ.', priority: 'INFO' });
       }
-    } catch (e) {
-      console.warn('AI Insights - Lỗi công nợ:', e);
-      insights.push({ title: 'Chưa kiểm tra được công nợ', category: 'FINANCE', description: 'Chưa đối chiếu được số dư công nợ hiện tại. Hãy tải lại, không dùng dữ liệu thiếu để kết luận đã hết nợ.', priority: 'INFO' });
     }
 
-    if (insights.length === 0) {
+    if (insights.length === 0 && (access.inventory || access.tax || access.receivables)) {
       insights.push({
         title: 'Chưa ghi nhận cảnh báo trong phạm vi đã kiểm tra',
         category: 'SALES',
-        description: 'Không có cảnh báo về hàng dưới định mức, nghĩa vụ thuế đang mở hoặc công nợ khách hàng trong dữ liệu hiện tại. Kết quả này không thay thế kiểm tra toàn bộ hoạt động cửa hàng.',
+        description: 'Không có cảnh báo mới trong những nhóm dữ liệu bạn được phép xem.',
         priority: 'INFO',
       });
     }

@@ -4,6 +4,7 @@ import 'dart:async';
 import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -592,21 +593,19 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             appBar: AppBar(
               automaticallyImplyLeading: false,
               leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-              leading: Navigator.of(context).canPop()
-                  ? AppNavigationBackLeading(
-                      onPressed: () async {
-                        try {
-                          await ref.read(_cartProvider.notifier).flushDraft();
-                        } catch (_) {
-                          ToastService.showError(
-                            'Chưa giữ được bản nháp. Hãy thử lại trước khi rời trang.',
-                          );
-                          return;
-                        }
-                        if (context.mounted) Navigator.of(context).pop();
-                      },
-                    )
-                  : null,
+              leading: AppNavigationBackLeading(
+                onPressed: () async {
+                  try {
+                    await ref.read(_cartProvider.notifier).flushDraft();
+                  } catch (_) {
+                    ToastService.showError(
+                      'Chưa giữ được bản nháp. Hãy thử lại trước khi rời trang.',
+                    );
+                    return;
+                  }
+                  if (context.mounted) navigatePageBack(context);
+                },
+              ),
               title: const Text('Ghi nhận giao dịch bán hàng'),
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(28),

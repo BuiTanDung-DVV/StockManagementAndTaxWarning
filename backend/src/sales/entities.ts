@@ -137,7 +137,7 @@ export class SalesOrderItem {
     @Column({ type: 'decimal', precision: 18, scale: 2 })
     subtotal: number;
 
-    @Column({ name: 'cost_price', type: 'decimal', precision: 18, scale: 2, default: 0 })
+    @Column({ name: 'cost_price', type: 'decimal', precision: 26, scale: 10, default: 0 })
     costPrice: number;
 
     @Column({ name: 'tax_rate', type: 'decimal', precision: 5, scale: 2, default: 0 })

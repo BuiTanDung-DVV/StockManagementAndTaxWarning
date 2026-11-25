@@ -11,7 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../settings/providers/shop_provider.dart';
 
@@ -518,9 +518,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
         appBar: AppBar(
           automaticallyImplyLeading: false,
           leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-          leading: Navigator.of(context).canPop()
-              ? AppNavigationBackLeading(onPressed: context.pop)
-              : null,
+          leading: const AppPageBackLeading(),
           title: Text(
             'Quản lý nhân viên',
             style: GoogleFonts.manrope(
@@ -1065,9 +1063,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(onPressed: context.pop)
-            : null,
+        leading: const AppPageBackLeading(),
         title: Text(
           'Quản lý vai trò',
           style: GoogleFonts.manrope(

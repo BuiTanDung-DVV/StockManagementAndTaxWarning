@@ -1,3 +1,4 @@
+import { COGSService } from '../services/cogs.service';
 import { createHash } from 'crypto';
 import type { DataSource, EntityManager } from 'typeorm';
 import { lockShopMutation } from '../utils/shop-mutation-lock';
@@ -262,9 +263,13 @@ export class OpeningBalanceService {
             if (existing.length > 1) reject('STOCK_CONFLICT', 'Dòng tồn kho bị trùng.', 409);
             if (existing.length) await manager.query('UPDATE inventory_stocks SET quantity=quantity+$1,updated_at=now() WHERE id=$2 AND shop_id=$3', [row.delta, existing[0].id, request.shopId]);
             else await manager.query('INSERT INTO inventory_stocks(shop_id,product_id,warehouse_id,quantity,updated_at) VALUES($1,$2,$3,$4,now())', [request.shopId, product, warehouse, row.delta]);
+            const costing = new COGSService();
+            const input = request.rows.find(r => r.key === row.key)!;
+            const method = await costing.getCostingMethod(request.shopId, manager);
+            await costing.recordAverageMovement(request.shopId, product, row.delta,
+                row.valueDeltaCents / 100, manager);
             let lotId: number | undefined;
             if (row.delta > 0) {
-                const input = request.rows.find(r => r.key === row.key)!;
                 const [lot] = await manager.query(`INSERT INTO inventory_lots(shop_id,product_id,lot_date,initial_qty,remaining_qty,cost_price,notes)
                     VALUES($1,$2,$3::timestamptz AT TIME ZONE 'UTC',$4,$4,$5,$6) RETURNING id`,
                 [request.shopId, product, `${request.asOf}T00:00:00+07:00`, row.delta, input.unitCost, `Số dư ban đầu #${batchId}`]);
@@ -280,7 +285,7 @@ export class OpeningBalanceService {
                 Math.abs(row.delta), batchId, `Đối chiếu đầu ngày ${request.asOf}`, actorId]);
             await this.adjustment(manager, request, row, batchId, 'STOCK_MOVEMENT', row.valueDeltaCents, row.delta,
                 { product, warehouse }, { ...(lotId ? { lotId } : {}), lotAllocations: row.lotAllocations });
-            await manager.query(`UPDATE products SET cost_price=COALESCE((SELECT ROUND(SUM(remaining_qty::numeric*cost_price)/NULLIF(SUM(remaining_qty),0),2)
+            if (method === 'FIFO') await manager.query(`UPDATE products SET cost_price=COALESCE((SELECT ROUND(SUM(remaining_qty::numeric*cost_price)/NULLIF(SUM(remaining_qty),0),2)
                 FROM inventory_lots WHERE shop_id=$1 AND product_id=$2 AND remaining_qty>0),cost_price) WHERE shop_id=$1 AND id=$2`, [request.shopId, product]);
         } else {
             const receivable = row.kind === 'RECEIVABLE', partyId = Number(row.key.split(':')[1]);

@@ -21,7 +21,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../providers/sales_provider.dart';
 import '../../settings/providers/system_provider.dart';
 import '../../settings/providers/shop_provider.dart';
@@ -51,11 +51,7 @@ class OrderDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leading: const AppPageBackLeading(),
         title: Text(
           'Chi Tiết Đơn Hàng',
           style: GoogleFonts.manrope(
